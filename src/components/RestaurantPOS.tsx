@@ -4,112 +4,98 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChefHat } from "lucide-react";
+import { Plus, Minus, Trash2, DollarSign, Clock, Users, ShoppingCart, Receipt, CreditCard, Banknote } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface RestaurantPOSProps {
   onSaleRecord: (sale: any) => void;
 }
 
-const menuItems = [
-  { id: 'rice_beans', name: 'Rice & Beans', price: 8500, category: 'Main Dish' },
-  { id: 'matooke', name: 'Matooke', price: 7000, category: 'Main Dish' },
-  { id: 'posho', name: 'Posho', price: 5500, category: 'Main Dish' },
-  { id: 'chicken', name: 'Grilled Chicken', price: 15000, category: 'Protein' },
-  { id: 'beef', name: 'Beef Stew', price: 12000, category: 'Protein' },
-  { id: 'fish', name: 'Fried Fish', price: 18000, category: 'Protein' },
-  { id: 'vegetables', name: 'Mixed Vegetables', price: 6000, category: 'Vegetables' },
-  { id: 'salad', name: 'Garden Salad', price: 4500, category: 'Vegetables' },
-  { id: 'soda', name: 'Soda', price: 2500, category: 'Beverages' },
-  { id: 'juice', name: 'Fresh Juice', price: 4000, category: 'Beverages' },
-  { id: 'water', name: 'Bottled Water', price: 1500, category: 'Beverages' },
-];
-
-interface OrderItem {
-  item: typeof menuItems[0];
-  quantity: number;
-  total: number;
-}
-
 export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) => {
-  const [order, setOrder] = useState<OrderItem[]>([]);
-  const [selectedItem, setSelectedItem] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [customerName, setCustomerName] = useState('');
+  const [currentOrder, setCurrentOrder] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('appetizers');
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [amountReceived, setAmountReceived] = useState('');
   const [tableNumber, setTableNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [customerName, setCustomerName] = useState('');
 
-  const addToOrder = () => {
-    if (!selectedItem || !quantity) {
-      toast({
-        title: "Error",
-        description: "Please select an item and quantity",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Menu items organized by category with UGX prices
+  const menuItems = {
+    appetizers: [
+      { id: 1, name: 'Chicken Wings', price: 25000, category: 'appetizers' },
+      { id: 2, name: 'Samosas', price: 15000, category: 'appetizers' },
+      { id: 3, name: 'Garden Salad', price: 18000, category: 'appetizers' },
+      { id: 4, name: 'Spring Rolls', price: 20000, category: 'appetizers' }
+    ],
+    mains: [
+      { id: 5, name: 'Grilled Tilapia', price: 45000, category: 'mains' },
+      { id: 6, name: 'Beef Stew', price: 35000, category: 'mains' },
+      { id: 7, name: 'Chicken Curry', price: 30000, category: 'mains' },
+      { id: 8, name: 'Pork Ribs', price: 40000, category: 'mains' },
+      { id: 9, name: 'Vegetable Rice', price: 25000, category: 'mains' }
+    ],
+    desserts: [
+      { id: 10, name: 'Chocolate Cake', price: 12000, category: 'desserts' },
+      { id: 11, name: 'Ice Cream', price: 8000, category: 'desserts' },
+      { id: 12, name: 'Fruit Salad', price: 10000, category: 'desserts' }
+    ],
+    beverages: [
+      { id: 13, name: 'Soft Drink', price: 3000, category: 'beverages' },
+      { id: 14, name: 'Coffee', price: 5000, category: 'beverages' },
+      { id: 15, name: 'Fresh Juice', price: 8000, category: 'beverages' },
+      { id: 16, name: 'Local Beer', price: 6000, category: 'beverages' }
+    ]
+  };
 
-    const item = menuItems.find(m => m.id === selectedItem);
-    const quantityNum = parseInt(quantity);
+  const categories = [
+    { id: 'appetizers', name: 'Appetizers', icon: '🥗' },
+    { id: 'mains', name: 'Main Dishes', icon: '🍖' },
+    { id: 'desserts', name: 'Desserts', icon: '🍰' },
+    { id: 'beverages', name: 'Beverages', icon: '🥤' }
+  ];
 
-    if (!item || quantityNum <= 0) {
-      toast({
-        title: "Error",
-        description: "Invalid selection or quantity",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const existingItem = order.find(orderItem => orderItem.item.id === selectedItem);
-    
+  const addToOrder = (item) => {
+    const existingItem = currentOrder.find(orderItem => orderItem.id === item.id);
     if (existingItem) {
-      setOrder(order.map(orderItem => 
-        orderItem.item.id === selectedItem 
-          ? { 
-              ...orderItem, 
-              quantity: orderItem.quantity + quantityNum, 
-              total: (orderItem.quantity + quantityNum) * item.price 
-            }
+      setCurrentOrder(currentOrder.map(orderItem =>
+        orderItem.id === item.id
+          ? { ...orderItem, quantity: orderItem.quantity + 1 }
           : orderItem
       ));
     } else {
-      setOrder([...order, {
-        item,
-        quantity: quantityNum,
-        total: quantityNum * item.price
-      }]);
+      setCurrentOrder([...currentOrder, { ...item, quantity: 1 }]);
     }
-
-    setSelectedItem('');
-    setQuantity('');
   };
 
-  const removeFromOrder = (itemId: string) => {
-    setOrder(order.filter(orderItem => orderItem.item.id !== itemId));
+  const updateQuantity = (id, change) => {
+    setCurrentOrder(currentOrder.map(item => {
+      if (item.id === id) {
+        const newQuantity = item.quantity + change;
+        return newQuantity > 0 ? { ...item, quantity: newQuantity } : item;
+      }
+      return item;
+    }).filter(item => item.quantity > 0));
   };
 
-  const totalAmount = order.reduce((sum, orderItem) => sum + orderItem.total, 0);
+  const removeFromOrder = (id) => {
+    setCurrentOrder(currentOrder.filter(item => item.id !== id));
+  };
 
-  const handleSale = () => {
-    if (order.length === 0) {
-      toast({
-        title: "Error",
-        description: "Order is empty",
-        variant: "destructive",
-      });
-      return;
-    }
+  const calculateSubtotal = () => {
+    return currentOrder.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
 
-    if (!paymentMethod) {
-      toast({
-        title: "Error",
-        description: "Please select payment method",
-        variant: "destructive",
-      });
-      return;
-    }
+  const calculateTotal = () => {
+    return calculateSubtotal(); // No tax for simplicity
+  };
+
+  const formatCurrency = (amount) => {
+    return `UGX ${Math.round(amount).toLocaleString()}`;
+  };
+
+  const processPayment = () => {
+    if (currentOrder.length === 0) return;
 
     const sale = {
       id: Date.now(),
@@ -117,14 +103,14 @@ export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) =>
       type: 'restaurant_sale',
       customer: customerName || 'Walk-in Customer',
       tableNumber: tableNumber || 'N/A',
-      items: order.map(orderItem => ({
-        name: orderItem.item.name,
-        quantity: orderItem.quantity,
-        price: orderItem.item.price,
-        total: orderItem.total,
-        category: orderItem.item.category
+      items: currentOrder.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity,
+        category: item.category
       })),
-      total: totalAmount,
+      total: calculateTotal(),
       paymentMethod,
       timestamp: new Date(),
       status: 'pending'
@@ -133,156 +119,247 @@ export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) =>
     onSaleRecord(sale);
     
     // Reset form
-    setOrder([]);
-    setCustomerName('');
+    setCurrentOrder([]);
+    setShowPayment(false);
+    setAmountReceived('');
     setTableNumber('');
-    setPaymentMethod('');
+    setCustomerName('');
 
     toast({
       title: "Order Recorded",
-      description: `Restaurant order of UGX ${totalAmount.toLocaleString()} recorded successfully`,
+      description: `Restaurant order of ${formatCurrency(calculateTotal())} recorded successfully`,
     });
   };
 
-  const categories = [...new Set(menuItems.map(item => item.category))];
-
   return (
-    <div className="space-y-6">
-      <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-800">
-            <ChefHat className="h-6 w-6" />
-            Restaurant POS
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Menu Item</Label>
-              <Select value={selectedItem} onValueChange={setSelectedItem}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select menu item" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg">
-                  {categories.map(category => (
-                    <div key={category}>
-                      <div className="px-2 py-1 text-sm font-semibold text-gray-600 bg-gray-100">
-                        {category}
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-2">
+              <Receipt className="text-amber-600" />
+              Restaurant POS System
+            </h1>
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-1">
+                <Clock size={16} />
+                {new Date().toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Menu Section */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4">Menu</h2>
+              
+              {/* Category Tabs */}
+              <div className="flex flex-wrap gap-2 mb-6 border-b">
+                {categories.map(category => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+                      selectedCategory === category.id
+                        ? 'bg-amber-600 text-white border-b-2 border-amber-600'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <span className="mr-2">{category.icon}</span>
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Menu Items Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {menuItems[selectedCategory].map(item => (
+                  <div
+                    key={item.id}
+                    onClick={() => addToOrder(item)}
+                    className="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:border-amber-300 bg-gradient-to-br from-white to-gray-50"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                        <p className="text-lg font-bold text-amber-600 mt-2">
+                          {formatCurrency(item.price)}
+                        </p>
                       </div>
-                      {menuItems
-                        .filter(item => item.category === category)
-                        .map(item => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.name} - UGX {item.price.toLocaleString()}
-                          </SelectItem>
-                        ))}
+                      <Plus className="text-amber-600 ml-2 flex-shrink-0" size={20} />
                     </div>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Quantity</Label>
-              <Input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="0"
-                min="1"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>&nbsp;</Label>
-              <Button onClick={addToOrder} className="w-full bg-amber-600 hover:bg-amber-700">
-                Add to Order
-              </Button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {order.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Current Order</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {order.map(orderItem => (
-                    <div key={orderItem.item.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                      <div>
-                        <span className="font-medium">{orderItem.item.name}</span>
-                        <span className="text-sm text-gray-600 ml-2">
-                          {orderItem.quantity} × UGX {orderItem.item.price.toLocaleString()}
-                        </span>
-                        <span className="text-xs text-amber-600 ml-2 px-1 py-0.5 bg-amber-100 rounded">
-                          {orderItem.item.category}
-                        </span>
+          {/* Order Summary Section */}
+          <div className="space-y-6">
+            {/* Customer and Table Info */}
+            <div className="bg-white rounded-lg shadow-md p-4 space-y-4">
+              <div>
+                <Label htmlFor="customerName">Customer Name (Optional)</Label>
+                <Input
+                  id="customerName"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter customer name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="tableNumber">Table Number (Optional)</Label>
+                <Input
+                  id="tableNumber"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  placeholder="Enter table number"
+                />
+              </div>
+            </div>
+
+            {/* Current Order */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <ShoppingCart size={20} />
+                Current Order
+              </h2>
+
+              {currentOrder.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No items added yet</p>
+              ) : (
+                <>
+                  <div className="space-y-3 mb-6">
+                    {currentOrder.map(item => (
+                      <div key={item.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{item.name}</h4>
+                          <p className="text-sm text-gray-600">
+                            {formatCurrency(item.price)} each
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center"
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <button
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="w-8 h-8 rounded-full bg-green-100 text-green-600 hover:bg-green-200 flex items-center justify-center"
+                          >
+                            <Plus size={16} />
+                          </button>
+                          <button
+                            onClick={() => removeFromOrder(item.id)}
+                            className="w-8 h-8 rounded-full bg-gray-100 text-red-600 hover:bg-red-100 flex items-center justify-center ml-2"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">UGX {orderItem.total.toLocaleString()}</span>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => removeFromOrder(orderItem.item.id)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
+                    ))}
+                  </div>
+
+                  {/* Order Total */}
+                  <div className="border-t pt-4 space-y-2">
+                    <div className="flex justify-between text-lg font-bold border-t pt-2">
+                      <span>Total:</span>
+                      <span className="text-amber-600">{formatCurrency(calculateTotal())}</span>
                     </div>
-                  ))}
-                  <div className="border-t pt-2 flex justify-between items-center text-lg font-bold">
-                    <span>Total:</span>
-                    <span className="text-amber-600">UGX {totalAmount.toLocaleString()}</span>
+                  </div>
+
+                  <Button
+                    onClick={() => setShowPayment(true)}
+                    className="w-full bg-green-600 hover:bg-green-700 mt-4"
+                  >
+                    <DollarSign size={20} className="mr-2" />
+                    Process Payment
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Modal */}
+        {showPayment && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">Process Payment</h2>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total Amount:</span>
+                    <span>{formatCurrency(calculateTotal())}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
 
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Customer Name (Optional)</Label>
-              <Input
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Enter customer name"
-              />
-            </div>
+                <div>
+                  <Label>Payment Method</Label>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    <button
+                      onClick={() => setPaymentMethod('cash')}
+                      className={`p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
+                        paymentMethod === 'cash'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <Banknote size={20} />
+                      Cash
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('card')}
+                      className={`p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
+                        paymentMethod === 'card'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      <CreditCard size={20} />
+                      Card
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod('mobile')}
+                      className={`p-3 rounded-lg border-2 flex items-center justify-center gap-2 ${
+                        paymentMethod === 'mobile'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      📱
+                      Mobile
+                    </button>
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <Label>Table Number (Optional)</Label>
-              <Input
-                value={tableNumber}
-                onChange={(e) => setTableNumber(e.target.value)}
-                placeholder="Table #"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Payment Method</Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment" />
-                </SelectTrigger>
-                <SelectContent className="bg-white border shadow-lg">
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                  <SelectItem value="mobile">Mobile Money</SelectItem>
-                </SelectContent>
-              </Select>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPayment(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={processPayment}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    Complete Order
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
-
-          <Button 
-            onClick={handleSale}
-            className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700"
-            disabled={order.length === 0}
-          >
-            Complete Order
-          </Button>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
   );
 };
