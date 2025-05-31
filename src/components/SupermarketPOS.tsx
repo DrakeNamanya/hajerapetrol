@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Supermarket } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface SupermarketPOSProps {
@@ -147,7 +147,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-green-800">
-            <Supermarket className="h-6 w-6" />
+            <ShoppingCart className="h-6 w-6" />
             Supermarket POS
           </CardTitle>
         </CardHeader>

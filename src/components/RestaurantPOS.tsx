@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Restaurant } from "lucide-react";
+import { ChefHat } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface RestaurantPOSProps {
@@ -151,7 +151,7 @@ export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) =>
       <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-amber-800">
-            <Restaurant className="h-6 w-6" />
+            <ChefHat className="h-6 w-6" />
             Restaurant POS
           </CardTitle>
         </CardHeader>
