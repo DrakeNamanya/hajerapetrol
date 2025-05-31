@@ -9,6 +9,7 @@ import { AccountantDashboard } from '@/components/AccountantDashboard';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Fuel, Building2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -87,19 +88,32 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 relative">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-10 right-10 w-40 h-40 bg-orange-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-10 w-60 h-60 bg-red-200/30 rounded-full blur-3xl"></div>
+      </div>
+
       {/* Header */}
-      <div className={`bg-gradient-to-r ${getDepartmentColor(currentUser.department)} text-white shadow-lg`}>
+      <div className={`bg-gradient-to-r ${getDepartmentColor(currentUser.department)} text-white shadow-xl relative z-10`}>
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold">Multi-Department POS System</h1>
-              <p className="text-blue-100">Fuel Station • Supermarket • Restaurant</p>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                  <Fuel className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">HAJARA FUEL STATION BUSIA</h1>
+                  <p className="text-sm opacity-90">Multi-Department POS System</p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="font-semibold">{currentUser.name}</p>
-                <p className="text-sm text-blue-100">{getRoleDisplayName(currentUser.role)}</p>
+                <p className="text-sm opacity-90">{getRoleDisplayName(currentUser.role)}</p>
               </div>
               <Avatar>
                 <AvatarFallback className="bg-white/20 text-white">
@@ -119,11 +133,11 @@ const Index = () => {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-6 py-8">
+      <div className="container mx-auto px-6 py-8 relative z-10">
         {/* Dashboard for Manager */}
         {currentUser.role === 'manager' && (
           <div>
-            <Card className="mb-6">
+            <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl">Manager Dashboard</CardTitle>
                 <p className="text-gray-600">Monitor all departments and approve sales</p>
@@ -139,7 +153,7 @@ const Index = () => {
         {/* Dashboard for Accountant */}
         {currentUser.role === 'accountant' && (
           <div>
-            <Card className="mb-6">
+            <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl">Accountant Dashboard</CardTitle>
                 <p className="text-gray-600">Review and approve sales from all departments</p>
@@ -155,9 +169,12 @@ const Index = () => {
         {/* Fuel Station POS */}
         {currentUser.role === 'fuel_cashier' && (
           <div>
-            <Card className="mb-6">
+            <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-2xl">Fuel Station</CardTitle>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Fuel className="text-orange-600" />
+                  Fuel Station
+                </CardTitle>
                 <p className="text-gray-600">Record fuel sales and manage pump operations</p>
               </CardHeader>
             </Card>
@@ -168,9 +185,12 @@ const Index = () => {
         {/* Supermarket POS */}
         {currentUser.role === 'supermarket_cashier' && (
           <div>
-            <Card className="mb-6">
+            <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-2xl">Supermarket</CardTitle>
+                <CardTitle className="text-2xl flex items-center gap-2">
+                  <Building2 className="text-green-600" />
+                  Supermarket
+                </CardTitle>
                 <p className="text-gray-600">Process grocery sales and manage inventory</p>
               </CardHeader>
             </Card>
@@ -181,7 +201,7 @@ const Index = () => {
         {/* Restaurant POS */}
         {currentUser.role === 'restaurant_cashier' && (
           <div>
-            <Card className="mb-6">
+            <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
                 <CardTitle className="text-2xl">Restaurant</CardTitle>
                 <p className="text-gray-600">Take orders and process restaurant sales</p>
@@ -190,6 +210,12 @@ const Index = () => {
             <RestaurantPOS onSaleRecord={handleSaleRecord} />
           </div>
         )}
+      </div>
+
+      {/* Powered by footer - fixed position */}
+      <div className="fixed bottom-4 right-4 text-xs text-gray-500 bg-white/80 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg z-20">
+        Powered by <span className="font-semibold text-orange-600">DATACOLLECTORS LTD</span><br />
+        <span className="text-gray-600">0701634653</span>
       </div>
     </div>
   );
