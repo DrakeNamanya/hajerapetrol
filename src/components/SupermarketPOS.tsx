@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
-  const [barcodeInput, setBarco deInput] = useState('');
+  const [barcodeInput, setBarcodeInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [dailySales, setDailySales] = useState<Sale[]>([]);
   const [salesSubmitted, setSalesSubmitted] = useState(false);
