@@ -1,9 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { Fuel, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface Sale {
   id: number;
@@ -24,6 +28,21 @@ interface ManagerDashboardProps {
 }
 
 export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApprove }) => {
+  const [dipstickReadings, setDipstickReadings] = useState({
+    petrol_regular: '',
+    petrol_premium: '',
+    diesel: '',
+    kerosene: ''
+  });
+
+  // Simulated fuel data - in real app this would come from fuel POS
+  const fuelInventory = [
+    { id: 'petrol_regular', name: 'Regular Petrol', totalInventory: 5000, sold: 300, available: 4700 },
+    { id: 'petrol_premium', name: 'Premium Petrol', totalInventory: 3500, sold: 200, available: 3300 },
+    { id: 'diesel', name: 'Diesel', totalInventory: 4200, sold: 150, available: 4050 },
+    { id: 'kerosene', name: 'Kerosene', totalInventory: 2800, sold: 100, available: 2700 },
+  ];
+
   const pendingSales = sales.filter(sale => sale.status === 'accountant_approved');
   const approvedSales = sales.filter(sale => sale.status === 'approved');
 
@@ -47,6 +66,13 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     });
   };
 
+  const handleDipstickVerification = () => {
+    toast({
+      title: "Dipstick Reading Verified",
+      description: "Fuel inventory readings have been recorded",
+    });
+  };
+
   const departmentStats = ['fuel', 'supermarket', 'restaurant'].map(dept => {
     const deptSales = approvedSales.filter(sale => sale.department === dept);
     const deptRevenue = deptSales.reduce((sum, sale) => sum + sale.total, 0);
@@ -59,150 +85,254 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-blue-600">
-              UGX {totalRevenue.toLocaleString()}
-            </div>
-            <p className="text-blue-600 font-medium">Total Revenue</p>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="sales">Sales Approval</TabsTrigger>
+          <TabsTrigger value="fuel">Fuel Verification</TabsTrigger>
+        </TabsList>
 
-        <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-yellow-600">
-              UGX {pendingRevenue.toLocaleString()}
-            </div>
-            <p className="text-yellow-600 font-medium">Pending Approval</p>
-          </CardContent>
-        </Card>
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-blue-600">
+                  UGX {totalRevenue.toLocaleString()}
+                </div>
+                <p className="text-blue-600 font-medium">Total Revenue</p>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-green-600">
-              {approvedSales.length}
-            </div>
-            <p className="text-green-600 font-medium">Approved Sales</p>
-          </CardContent>
-        </Card>
+            <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-yellow-600">
+                  UGX {pendingRevenue.toLocaleString()}
+                </div>
+                <p className="text-yellow-600 font-medium">Pending Approval</p>
+              </CardContent>
+            </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-          <CardContent className="p-6">
-            <div className="text-2xl font-bold text-purple-600">
-              {pendingSales.length}
-            </div>
-            <p className="text-purple-600 font-medium">Awaiting Approval</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-green-600">
+                  {approvedSales.length}
+                </div>
+                <p className="text-green-600 font-medium">Approved Sales</p>
+              </CardContent>
+            </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {departmentStats.map(stat => (
-          <Card key={stat.department}>
+            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <CardContent className="p-6">
+                <div className="text-2xl font-bold text-purple-600">
+                  {pendingSales.length}
+                </div>
+                <p className="text-purple-600 font-medium">Awaiting Approval</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {departmentStats.map(stat => (
+              <Card key={stat.department}>
+                <CardHeader>
+                  <CardTitle className="capitalize">{stat.department} Department</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Sales Count:</span>
+                      <span className="font-semibold">{stat.sales}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Revenue:</span>
+                      <span className="font-semibold">UGX {stat.revenue.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="sales" className="space-y-6">
+          {pendingSales.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sales Awaiting Final Approval</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {pendingSales.map(sale => (
+                    <div key={sale.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className={getDepartmentColor(sale.department)}>
+                              {sale.department.toUpperCase()}
+                            </Badge>
+                            <span className="text-sm text-gray-600">
+                              {sale.timestamp.toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="font-medium">{sale.customer}</p>
+                          {sale.tableNumber && (
+                            <p className="text-sm text-gray-600">Table: {sale.tableNumber}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-green-600">
+                            UGX {sale.total.toLocaleString()}
+                          </div>
+                          <p className="text-sm text-gray-600">{sale.paymentMethod}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <h4 className="font-medium mb-2">Items:</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {sale.items.map((item, index) => (
+                            <div key={index} className="text-sm bg-white p-2 rounded border">
+                              <span className="font-medium">{item.name}</span>
+                              <span className="text-gray-600 ml-2">
+                                {item.quantity} × UGX {item.price.toLocaleString()} = UGX {item.total.toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Button 
+                        onClick={() => handleApprove(sale.id)}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        Approve Sale
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
             <CardHeader>
-              <CardTitle className="capitalize">{stat.department} Department</CardTitle>
+              <CardTitle>Recent Approved Sales</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Sales Count:</span>
-                  <span className="font-semibold">{stat.sales}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Revenue:</span>
-                  <span className="font-semibold">UGX {stat.revenue.toLocaleString()}</span>
-                </div>
+              <div className="space-y-3">
+                {approvedSales.slice(-10).reverse().map(sale => (
+                  <div key={sale.id} className="flex justify-between items-center border-b pb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className={getDepartmentColor(sale.department)}>
+                        {sale.department.toUpperCase()}
+                      </Badge>
+                      <span className="font-medium">{sale.customer}</span>
+                      <span className="text-sm text-gray-600">
+                        {sale.timestamp.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="font-semibold text-green-600">
+                      UGX {sale.total.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </TabsContent>
 
-      {pendingSales.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Awaiting Final Approval</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {pendingSales.map(sale => (
-                <div key={sale.id} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge className={getDepartmentColor(sale.department)}>
-                          {sale.department.toUpperCase()}
-                        </Badge>
-                        <span className="text-sm text-gray-600">
-                          {sale.timestamp.toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="font-medium">{sale.customer}</p>
-                      {sale.tableNumber && (
-                        <p className="text-sm text-gray-600">Table: {sale.tableNumber}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-green-600">
-                        UGX {sale.total.toLocaleString()}
-                      </div>
-                      <p className="text-sm text-gray-600">{sale.paymentMethod}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-3">
-                    <h4 className="font-medium mb-2">Items:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {sale.items.map((item, index) => (
-                        <div key={index} className="text-sm bg-white p-2 rounded border">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="text-gray-600 ml-2">
-                            {item.quantity} × UGX {item.price.toLocaleString()} = UGX {item.total.toLocaleString()}
-                          </span>
+        <TabsContent value="fuel" className="space-y-6">
+          <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-800">
+                <Fuel className="h-6 w-6" />
+                Daily Fuel Inventory Verification
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-700 mb-4">
+                Compare dipstick readings with calculated inventory to verify fuel levels.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {fuelInventory.map(fuel => {
+                  const dipstickReading = parseFloat(dipstickReadings[fuel.id as keyof typeof dipstickReadings] || '0');
+                  const calculatedInventory = fuel.totalInventory - fuel.sold;
+                  const difference = dipstickReading - calculatedInventory;
+                  const isMatch = Math.abs(difference) <= 50; // 50L tolerance
+
+                  return (
+                    <Card key={fuel.id} className="border-2">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{fuel.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-gray-600">Total Inventory:</p>
+                            <p className="font-semibold">{fuel.totalInventory.toLocaleString()}L</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600">Fuel Sold:</p>
+                            <p className="font-semibold">{fuel.sold.toLocaleString()}L</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600">Calculated Available:</p>
+                            <p className="font-semibold">{calculatedInventory.toLocaleString()}L</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-600">Dipstick Reading:</p>
+                            <Input
+                              type="number"
+                              value={dipstickReadings[fuel.id as keyof typeof dipstickReadings]}
+                              onChange={(e) => setDipstickReadings(prev => ({
+                                ...prev,
+                                [fuel.id]: e.target.value
+                              }))}
+                              placeholder="Enter reading"
+                              className="h-8"
+                            />
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  <Button 
-                    onClick={() => handleApprove(sale.id)}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    Approve Sale
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Approved Sales</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {approvedSales.slice(-10).reverse().map(sale => (
-              <div key={sale.id} className="flex justify-between items-center border-b pb-2">
-                <div className="flex items-center gap-2">
-                  <Badge className={getDepartmentColor(sale.department)}>
-                    {sale.department.toUpperCase()}
-                  </Badge>
-                  <span className="font-medium">{sale.customer}</span>
-                  <span className="text-sm text-gray-600">
-                    {sale.timestamp.toLocaleString()}
-                  </span>
-                </div>
-                <div className="font-semibold text-green-600">
-                  UGX {sale.total.toLocaleString()}
-                </div>
+                        {dipstickReading > 0 && (
+                          <div className={`p-3 rounded-lg ${isMatch ? 'bg-green-100' : 'bg-red-100'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              {isMatch ? (
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              ) : (
+                                <AlertTriangle className="h-4 w-4 text-red-600" />
+                              )}
+                              <span className={`font-semibold ${isMatch ? 'text-green-800' : 'text-red-800'}`}>
+                                {isMatch ? 'Match' : 'Discrepancy'}
+                              </span>
+                            </div>
+                            <p className="text-sm">
+                              Difference: {difference > 0 ? '+' : ''}{difference.toLocaleString()}L
+                            </p>
+                            {!isMatch && (
+                              <p className="text-xs text-red-600 mt-1">
+                                Please investigate the discrepancy
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+
+              <Button 
+                onClick={handleDipstickVerification}
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+              >
+                Verify and Record Readings
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
