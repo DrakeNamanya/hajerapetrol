@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -267,7 +266,8 @@ export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) =>
                         alt={item.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.src = `data:image/svg+xml;base64,${btoa(`
+                          const target = e.target as HTMLImageElement;
+                          target.src = `data:image/svg+xml;base64,${btoa(`
                             <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
                               <rect width="100%" height="100%" fill="#f3f4f6"/>
                               <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#6b7280" font-family="Arial" font-size="14">
@@ -721,7 +721,7 @@ export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) =>
         )}
 
         {/* Print Styles */}
-        <style jsx>{`
+        <style>{`
           @media print {
             body * {
               visibility: hidden;
