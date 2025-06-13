@@ -105,7 +105,7 @@ const Index = () => {
                   <Fuel className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold">HAJARA FUEL STATION BUSIA</h1>
+                  <h1 className="text-xl font-bold">HIPEMART OILS</h1>
                   <p className="text-sm opacity-90">Multi-Department POS System</p>
                 </div>
               </div>

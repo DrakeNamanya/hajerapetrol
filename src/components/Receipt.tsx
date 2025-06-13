@@ -54,8 +54,11 @@ export const Receipt: React.FC<ReceiptProps> = ({ receiptData }) => {
             <Fuel className="w-6 h-6 text-white" />
           </div>
         </div>
-        <h1 className="text-lg font-bold text-gray-800">HAJARA FUEL STATION</h1>
-        <h2 className="text-md font-semibold text-orange-600">BUSIA</h2>
+        <h1 className="text-lg font-bold text-gray-800">HIPEMART OILS</h1>
+        <h2 className="text-md font-semibold text-orange-600">BUKHALIHA ROAD, BUSIA</h2>
+        <p className="text-xs text-gray-600 mt-1">
+          +256 776 429450 | www.hipemartoils.com
+        </p>
         <p className="text-xs text-gray-600 mt-1">
           {receiptData.department.toUpperCase()} DEPARTMENT
         </p>
