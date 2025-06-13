@@ -71,8 +71,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
                 <Building2 className="w-4 h-4 text-white" />
               </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">HAJARA FUEL STATION</h1>
-            <p className="text-lg text-orange-600 font-semibold">BUSIA</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">HIPEMART OILS</h1>
+            <p className="text-lg text-orange-600 font-semibold">BUKHALIHA ROAD, BUSIA</p>
           </div>
           
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
