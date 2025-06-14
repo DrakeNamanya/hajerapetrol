@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Fuel, AlertTriangle, CheckCircle, DollarSign } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface Sale {
   id: number;
@@ -23,14 +24,15 @@ interface Sale {
 }
 
 interface Expense {
-  id: number;
-  category: string;
-  amount: number;
+  id: string;
+  type: string;
   description: string;
+  amount: number;
   department: string;
-  requestedBy: string;
-  timestamp: Date;
-  status: 'pending' | 'manager_approved' | 'director_approved' | 'rejected';
+  status: string;
+  created_at: string;
+  rejection_reason?: string;
+  requested_by: string;
 }
 
 interface ManagerDashboardProps {
@@ -46,39 +48,98 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     kerosene: ''
   });
 
-  // Mock expense data from accountant
-  const [expenses, setExpenses] = useState<Expense[]>([
-    {
-      id: 1,
-      category: 'Office Supplies',
-      amount: 150000,
-      description: 'Printer paper, pens, and stationery',
-      department: 'All',
-      requestedBy: 'Sarah Accountant',
-      timestamp: new Date(),
-      status: 'pending'
-    },
-    {
-      id: 2,
-      category: 'Equipment Maintenance',
-      amount: 350000,
-      description: 'Fuel pump maintenance and calibration',
-      department: 'Fuel',
-      requestedBy: 'Sarah Accountant',
-      timestamp: new Date(),
-      status: 'pending'
-    },
-    {
-      id: 3,
-      category: 'Marketing',
-      amount: 500000,
-      description: 'Local radio advertisement campaign',
-      department: 'All',
-      requestedBy: 'Sarah Accountant',
-      timestamp: new Date(),
-      status: 'pending'
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchExpenses();
+    getCurrentUser();
+  }, []);
+
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('Error getting user:', error);
+        return;
+      }
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error in getCurrentUser:', error);
     }
-  ]);
+  };
+
+  const fetchExpenses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('status', 'accountant_approved')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setExpenses(data || []);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch expenses",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateExpenseStatus = async (expenseId: string, newStatus: string, rejectionReason?: string) => {
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update expenses",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const updateData: any = {
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      };
+
+      if (newStatus === 'manager_approved') {
+        updateData.approved_by_manager = currentUser.id;
+        updateData.manager_approved_at = new Date().toISOString();
+      }
+
+      if (rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+      }
+
+      const { error } = await supabase
+        .from('expenses')
+        .update(updateData)
+        .eq('id', expenseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Expense ${newStatus === 'rejected' ? 'rejected' : 'approved and sent to director'}`,
+      });
+
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update expense",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Simulated fuel data - in real app this would come from fuel POS
   const fuelInventory = [
@@ -111,33 +172,15 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     });
   };
 
-  const handleExpenseApprove = (expenseId: number) => {
-    setExpenses(prev => 
-      prev.map(expense => 
-        expense.id === expenseId 
-          ? { ...expense, status: 'manager_approved' as const }
-          : expense
-      )
-    );
-    toast({
-      title: "Expense Approved",
-      description: "Expense has been approved and sent to director for final approval",
-    });
+  const handleExpenseApprove = (expenseId: string) => {
+    updateExpenseStatus(expenseId, 'manager_approved');
   };
 
-  const handleExpenseReject = (expenseId: number) => {
-    setExpenses(prev => 
-      prev.map(expense => 
-        expense.id === expenseId 
-          ? { ...expense, status: 'rejected' as const }
-          : expense
-      )
-    );
-    toast({
-      title: "Expense Rejected",
-      description: "Expense has been rejected",
-      variant: "destructive"
-    });
+  const handleExpenseReject = (expenseId: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+      updateExpenseStatus(expenseId, 'rejected', reason);
+    }
   };
 
   const handleDipstickVerification = () => {
@@ -157,7 +200,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     };
   });
 
-  const pendingExpenses = expenses.filter(expense => expense.status === 'pending');
+  const pendingExpenses = expenses.filter(expense => expense.status === 'accountant_approved');
   const approvedExpenses = expenses.filter(expense => expense.status === 'manager_approved');
 
   return (
@@ -335,15 +378,14 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-lg">{expense.category}</h4>
+                            <h4 className="font-semibold text-lg">{expense.type}</h4>
                             <Badge className={getDepartmentColor(expense.department)}>
                               {expense.department.toUpperCase()}
                             </Badge>
                           </div>
                           <p className="text-gray-700 mb-2">{expense.description}</p>
                           <div className="text-sm text-gray-600">
-                            <p>Requested by: {expense.requestedBy}</p>
-                            <p>Date: {expense.timestamp.toLocaleDateString()}</p>
+                            <p>Date: {new Date(expense.created_at).toLocaleDateString()}</p>
                           </div>
                         </div>
                         <div className="text-right ml-4">
@@ -357,6 +399,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                         <Button 
                           onClick={() => handleExpenseApprove(expense.id)}
                           className="flex-1 bg-green-600 hover:bg-green-700"
+                          disabled={loading}
                         >
                           Approve & Send to Director
                         </Button>
@@ -364,6 +407,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                           onClick={() => handleExpenseReject(expense.id)}
                           variant="destructive"
                           className="flex-1"
+                          disabled={loading}
                         >
                           Reject
                         </Button>
@@ -372,7 +416,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-600 text-center py-8">No pending expense requests</p>
+                <p className="text-gray-600 text-center py-8">No pending expense requests from accountant</p>
               )}
             </CardContent>
           </Card>
@@ -387,7 +431,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                   {approvedExpenses.map(expense => (
                     <div key={expense.id} className="flex justify-between items-center border-b pb-2">
                       <div>
-                        <span className="font-medium">{expense.category}</span>
+                        <span className="font-medium">{expense.type}</span>
                         <span className="text-sm text-gray-600 ml-2">({expense.department})</span>
                       </div>
                       <div className="text-right">
