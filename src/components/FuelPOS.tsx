@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { useSales } from '@/hooks/useSales';
+import { useSales, type SaleItem } from '@/hooks/useSales';
 
 interface FuelPOSProps {
   onSaleRecord: (sale: any) => void;
@@ -308,24 +308,29 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sales.filter(sale => sale.department === 'fuel').slice(0, 5).map(sale => (
-                <TableRow key={sale.id}>
-                  <TableCell>{new Date(sale.created_at).toLocaleTimeString()}</TableCell>
-                  <TableCell>{sale.customer_name || 'Walk-in'}</TableCell>
-                  <TableCell>{Array.isArray(sale.items) && sale.items[0]?.name}</TableCell>
-                  <TableCell>{Array.isArray(sale.items) && sale.items[0]?.quantity}L</TableCell>
-                  <TableCell>UGX {Number(sale.total).toLocaleString()}</TableCell>
-                  <TableCell>{sale.payment_method}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={sale.status === 'approved' ? 'default' : 
-                               sale.status === 'pending' ? 'secondary' : 'destructive'}
-                    >
-                      {sale.status}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {sales.filter(sale => sale.department === 'fuel').slice(0, 5).map(sale => {
+                const items = Array.isArray(sale.items) ? sale.items as SaleItem[] : [];
+                const firstItem = items[0];
+                
+                return (
+                  <TableRow key={sale.id}>
+                    <TableCell>{new Date(sale.created_at).toLocaleTimeString()}</TableCell>
+                    <TableCell>{sale.customer_name || 'Walk-in'}</TableCell>
+                    <TableCell>{firstItem?.name || 'N/A'}</TableCell>
+                    <TableCell>{firstItem?.quantity || 0}L</TableCell>
+                    <TableCell>UGX {Number(sale.total).toLocaleString()}</TableCell>
+                    <TableCell>{sale.payment_method}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={sale.status === 'approved' ? 'default' : 
+                                 sale.status === 'pending' ? 'secondary' : 'destructive'}
+                      >
+                        {sale.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
