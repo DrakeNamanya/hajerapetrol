@@ -65,6 +65,44 @@ export const useReceipts = () => {
     }
   };
 
+  const updateBusinessSettings = async (settings: BusinessSettings) => {
+    try {
+      const { error } = await supabase
+        .from('business_settings')
+        .update({
+          business_name: settings.businessName,
+          address: settings.address,
+          phone: settings.phone,
+          email: settings.email,
+          website: settings.website,
+          updated_by: (await supabase.auth.getUser()).data.user?.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', (await supabase.from('business_settings').select('id').single()).data?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setBusinessSettings(settings);
+      
+      toast({
+        title: "Business Settings Updated",
+        description: "Business information has been updated successfully",
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error updating business settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update business settings",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const generateReceiptNumber = (department: string) => {
     const timestamp = Date.now();
     const prefix = department.substring(0, 3).toUpperCase();
@@ -116,6 +154,7 @@ export const useReceipts = () => {
     businessSettings,
     generateReceiptNumber,
     saveReceipt,
-    fetchBusinessSettings
+    fetchBusinessSettings,
+    updateBusinessSettings
   };
 };

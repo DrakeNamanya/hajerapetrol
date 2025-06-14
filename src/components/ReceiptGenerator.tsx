@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Printer, Download } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ReceiptItem {
   name: string;
@@ -37,17 +38,59 @@ interface BusinessInfo {
 
 interface ReceiptGeneratorProps {
   receiptData: ReceiptData;
-  businessInfo: BusinessInfo;
+  businessInfo?: BusinessInfo;
   onPrint?: () => void;
   onDownload?: () => void;
 }
 
 export const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({
   receiptData,
-  businessInfo,
+  businessInfo: propBusinessInfo,
   onPrint,
   onDownload
 }) => {
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(
+    propBusinessInfo || {
+      businessName: 'HIPEMART OILS',
+      address: 'BUKHALIHA ROAD, BUSIA',
+      phone: '+256 776 429450',
+      email: 'info@hipemartoils.com',
+      website: 'www.hipemartoils.com'
+    }
+  );
+
+  useEffect(() => {
+    if (!propBusinessInfo) {
+      fetchBusinessSettings();
+    }
+  }, [propBusinessInfo]);
+
+  const fetchBusinessSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('business_settings')
+        .select('*')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching business settings:', error);
+        return;
+      }
+
+      if (data) {
+        setBusinessInfo({
+          businessName: data.business_name,
+          address: data.address,
+          phone: data.phone,
+          email: data.email || '',
+          website: data.website || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching business settings:', error);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
     onPrint?.();
