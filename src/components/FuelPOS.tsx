@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -290,7 +291,7 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
             }}
             className="h-[300px]"
           >
-            <LineChart data={weeklyData} width="100%" height={300}>
+            <LineChart data={weeklyData} height={300}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="day" />
               <YAxis />
