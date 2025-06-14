@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DollarSign, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface Expense {
   id: string;
@@ -29,6 +30,7 @@ interface ExpenseTrackerProps {
 
 export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, department = 'supermarket' }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [newExpense, setNewExpense] = useState({
     type: '',
     description: '',
@@ -39,7 +41,22 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
 
   useEffect(() => {
     fetchExpenses();
+    getCurrentUser();
   }, []);
+
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('Error getting user:', error);
+        return;
+      }
+      setCurrentUser(user);
+      console.log('Current user:', user);
+    } catch (error) {
+      console.error('Error in getCurrentUser:', error);
+    }
+  };
 
   const fetchExpenses = async () => {
     try {
@@ -70,14 +87,19 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
       return;
     }
 
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to submit expenses",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      console.log('Submitting expense with user:', currentUser.id);
       
-      if (userError || !userData.user) {
-        throw new Error('User not authenticated');
-      }
-
       const { error } = await supabase
         .from('expenses')
         .insert({
@@ -85,10 +107,13 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
           description: newExpense.description,
           amount: parseFloat(newExpense.amount),
           department: newExpense.department,
-          requested_by: userData.user.id
+          requested_by: currentUser.id
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
 
       toast({
         title: "Success",
@@ -107,7 +132,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
       console.error('Error submitting expense:', error);
       toast({
         title: "Error",
-        description: "Failed to submit expense",
+        description: `Failed to submit expense: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -116,13 +141,16 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
   };
 
   const updateExpenseStatus = async (expenseId: string, newStatus: string, rejectionReason?: string) => {
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !userData.user) {
-        throw new Error('User not authenticated');
-      }
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to update expenses",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    try {
       const updateData: any = {
         status: newStatus,
         updated_at: new Date().toISOString()
@@ -130,13 +158,13 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
 
       // Set the appropriate approval fields based on user role
       if (userRole === 'accountant' && newStatus === 'accountant_approved') {
-        updateData.approved_by_accountant = userData.user.id;
+        updateData.approved_by_accountant = currentUser.id;
         updateData.accountant_approved_at = new Date().toISOString();
       } else if (userRole === 'manager' && newStatus === 'manager_approved') {
-        updateData.approved_by_manager = userData.user.id;
+        updateData.approved_by_manager = currentUser.id;
         updateData.manager_approved_at = new Date().toISOString();
       } else if (userRole === 'director' && newStatus === 'director_approved') {
-        updateData.approved_by_director = userData.user.id;
+        updateData.approved_by_director = currentUser.id;
         updateData.director_approved_at = new Date().toISOString();
       }
 
@@ -261,9 +289,18 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
                 rows={3}
               />
             </div>
-            <Button onClick={submitExpense} disabled={loading} className="w-full">
-              Submit for Approval
+            <Button 
+              onClick={submitExpense} 
+              disabled={loading || !currentUser} 
+              className="w-full"
+            >
+              {loading ? 'Submitting...' : 'Submit for Approval'}
             </Button>
+            {!currentUser && (
+              <p className="text-sm text-red-600 text-center">
+                You must be logged in to submit expenses
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
