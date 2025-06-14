@@ -309,7 +309,7 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
             </TableHeader>
             <TableBody>
               {sales.filter(sale => sale.department === 'fuel').slice(0, 5).map(sale => {
-                const items = Array.isArray(sale.items) ? sale.items as SaleItem[] : [];
+                const items = Array.isArray(sale.items) ? sale.items as unknown as SaleItem[] : [];
                 const firstItem = items[0];
                 
                 return (
