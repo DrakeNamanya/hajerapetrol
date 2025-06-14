@@ -13,7 +13,8 @@ import { ManagerDashboard } from '@/components/ManagerDashboard';
 import { ManagerApprovalDashboard } from '@/components/ManagerApprovalDashboard';
 import { DirectorDashboard } from '@/components/DirectorDashboard';
 import { TeamManagement } from '@/components/TeamManagement';
-import { Fuel, ShoppingCart, UtensilsCrossed, Calculator, Users, Building, CheckCircle, LogOut } from 'lucide-react';
+import { SalesAnalytics } from '@/components/SalesAnalytics';
+import { Fuel, ShoppingCart, UtensilsCrossed, Calculator, Users, Building, CheckCircle, LogOut, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { RealtimeNotifications } from '@/components/RealtimeNotifications';
@@ -90,13 +91,20 @@ const Index = () => {
     if (profile.role === 'director') {
       return (
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Director Overview</TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="team">Team Management</TabsTrigger>
             <TabsTrigger value="approvals">Sales Approvals</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
             <DirectorDashboard sales={sales} />
+          </TabsContent>
+          <TabsContent value="analytics">
+            <SalesAnalytics />
           </TabsContent>
           <TabsContent value="team">
             <TeamManagement />
@@ -111,13 +119,20 @@ const Index = () => {
     if (profile.role === 'manager') {
       return (
         <Tabs defaultValue="management" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="management">Management</TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="approvals">Sales Approvals</TabsTrigger>
             <TabsTrigger value="team">Team</TabsTrigger>
           </TabsList>
           <TabsContent value="management">
             <ManagerDashboard sales={sales} onApprove={handleSaleApproval} />
+          </TabsContent>
+          <TabsContent value="analytics">
+            <SalesAnalytics />
           </TabsContent>
           <TabsContent value="approvals">
             <ManagerApprovalDashboard />
@@ -130,7 +145,23 @@ const Index = () => {
     }
 
     if (profile.role === 'accountant') {
-      return <AccountantDashboard />;
+      return (
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="analytics">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="dashboard">
+            <AccountantDashboard />
+          </TabsContent>
+          <TabsContent value="analytics">
+            <SalesAnalytics />
+          </TabsContent>
+        </Tabs>
+      );
     }
 
     if (profile.role === 'fuel_cashier') {
