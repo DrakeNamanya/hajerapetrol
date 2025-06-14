@@ -95,7 +95,7 @@ const Index = () => {
             <TabsTrigger value="approvals">Sales Approvals</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
-            <DirectorDashboard />
+            <DirectorDashboard sales={sales} />
           </TabsContent>
           <TabsContent value="team">
             <TeamManagement />
