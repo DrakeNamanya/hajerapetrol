@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,6 +67,33 @@ export const TeamManagement: React.FC = () => {
     }
   };
 
+  const sendInvitationEmail = async (invitationEmail: string, invitationRole: string, invitationDepartment: string) => {
+    try {
+      console.log('Sending invitation email...');
+      
+      const { data, error } = await supabase.functions.invoke('send-invitation', {
+        body: {
+          email: invitationEmail,
+          role: invitationRole,
+          department: invitationDepartment,
+          inviterName: profile?.full_name || 'Team Administrator',
+          businessName: 'HIPEMART OILS'
+        }
+      });
+
+      if (error) {
+        console.error('Error sending invitation email:', error);
+        throw new Error(`Failed to send invitation email: ${error.message}`);
+      }
+
+      console.log('Invitation email sent successfully:', data);
+      return data;
+    } catch (error: any) {
+      console.error('Error in sendInvitationEmail:', error);
+      throw error;
+    }
+  };
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Attempting to send invitation...');
@@ -103,14 +129,10 @@ export const TeamManagement: React.FC = () => {
     setSuccess('');
 
     try {
-      console.log('Inserting invitation:', {
-        email: normalizedEmail,
-        role,
-        department,
-        invited_by: user.id
-      });
+      console.log('Creating invitation record in database...');
 
-      const { data, error: inviteError } = await supabase
+      // First, create the invitation record in the database
+      const { data: inviteData, error: inviteError } = await supabase
         .from('team_invitations')
         .insert({
           email: normalizedEmail,
@@ -121,19 +143,31 @@ export const TeamManagement: React.FC = () => {
         .select();
 
       if (inviteError) {
-        console.error('Invitation error:', inviteError);
-        setError(`Failed to send invitation: ${inviteError.message}`);
-      } else {
-        console.log('Invitation created successfully:', data);
-        setSuccess(`Invitation sent to ${email}. They can now sign up with this email to join your team.`);
+        console.error('Database invitation error:', inviteError);
+        throw new Error(`Failed to create invitation: ${inviteError.message}`);
+      }
+
+      console.log('Invitation record created successfully:', inviteData);
+
+      // Then, send the email invitation
+      try {
+        await sendInvitationEmail(normalizedEmail, role, department);
+        
+        setSuccess(`Invitation sent successfully to ${email}! They will receive an email with instructions to join the team.`);
         setEmail('');
         setRole('');
         setDepartment('');
         fetchTeamData(); // Refresh the data
+      } catch (emailError: any) {
+        console.error('Email sending failed, but invitation was created:', emailError);
+        setSuccess(`Invitation created in system for ${email}, but email delivery failed. Please contact them directly with signup instructions.`);
+        setError(`Email delivery issue: ${emailError.message}`);
+        fetchTeamData(); // Still refresh to show the pending invitation
       }
+
     } catch (error: any) {
       console.error('Unexpected error:', error);
-      setError(`Unexpected error: ${error.message}`);
+      setError(`Failed to send invitation: ${error.message}`);
     }
 
     setLoading(false);
@@ -360,7 +394,8 @@ export const TeamManagement: React.FC = () => {
           <h4 className="font-semibold text-blue-800 mb-2">How Invitations Work:</h4>
           <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
             <li>Send an invitation with the team member's email address</li>
-            <li>The team member visits the app and signs up with the EXACT same email</li>
+            <li>The team member receives an email with detailed instructions</li>
+            <li>They visit the app and sign up with the EXACT same email from the invitation</li>
             <li>Upon signup, they will automatically be assigned the role you specified</li>
             <li>If they don't sign up within 7 days, the invitation expires</li>
           </ol>
