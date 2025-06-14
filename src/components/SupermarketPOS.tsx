@@ -6,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Building2, ShoppingCart, Plus, Minus, Package, AlertTriangle, TrendingUp, TrendingDown, Clock, BarChart3 } from 'lucide-react';
+import { Building2, ShoppingCart, Plus, Minus, Package, AlertTriangle, TrendingUp, TrendingDown, Clock, BarChart3, Receipt } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ReceiptGenerator } from './ReceiptGenerator';
+import { useReceipts } from '@/hooks/useReceipts';
 
 interface Product {
   id: string;
@@ -42,10 +45,6 @@ interface Sale {
   timestamp: Date;
 }
 
-interface SupermarketPOSProps {
-  onSaleRecord: (sale: any) => void;
-}
-
 const initialProducts: Product[] = [
   { id: '1', name: 'Rice 5kg', barcode: '123456789012', price: 25000, category: 'Grains', stock: 50, lowStockAlert: 10, expiryDate: '2024-12-31', salesCount: 15 },
   { id: '2', name: 'Cooking Oil 1L', barcode: '123456789013', price: 8000, category: 'Oil', stock: 30, lowStockAlert: 5, expiryDate: '2024-10-15', salesCount: 22 },
@@ -53,6 +52,10 @@ const initialProducts: Product[] = [
   { id: '4', name: 'Bread', barcode: '123456789015', price: 2500, category: 'Bakery', stock: 20, lowStockAlert: 5, expiryDate: '2024-06-10', salesCount: 30 },
   { id: '5', name: 'Milk 1L', barcode: '123456789016', price: 3500, category: 'Dairy', stock: 15, lowStockAlert: 5, expiryDate: '2024-06-15', salesCount: 18 },
 ];
+
+interface SupermarketPOSProps {
+  onSaleRecord: (sale: any) => void;
+}
 
 export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -64,6 +67,10 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const [dailySales, setDailySales] = useState<Sale[]>([]);
   const [salesSubmitted, setSalesSubmitted] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState<any>(null);
+  
+  const { businessSettings, generateReceiptNumber, saveReceipt } = useReceipts();
 
   const addToCart = (product: Product) => {
     const existingItem = cart.find(item => item.id === product.id);
@@ -163,7 +170,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     }
   };
 
-  const handleSale = () => {
+  const handleSale = async () => {
     if (cart.length === 0) {
       toast({
         title: "Error",
@@ -182,8 +189,38 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       return;
     }
 
-    const total = cart.reduce((sum, item) => sum + item.total, 0);
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const tax = subtotal * 0.18; // 18% VAT
+    const total = subtotal + tax;
     
+    const receiptNumber = generateReceiptNumber('supermarket');
+    
+    // Create receipt data
+    const receiptData = {
+      receiptNumber,
+      department: 'supermarket',
+      customerName: 'Walk-in Customer',
+      items: cart.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total
+      })),
+      subtotal,
+      tax,
+      total,
+      paymentMethod,
+      timestamp: new Date()
+    };
+
+    // Save receipt to database
+    const receiptSaved = await saveReceipt(receiptData);
+    
+    if (receiptSaved) {
+      setCurrentReceipt(receiptData);
+      setShowReceipt(true);
+    }
+
     const sale: Sale = {
       id: Date.now(),
       items: cart,
@@ -421,7 +458,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
                     onClick={handleSale}
                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                   >
-                    Complete Sale
+                    Complete Sale & Generate Receipt
                   </Button>
                 </div>
               )}
@@ -641,6 +678,26 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Receipt Dialog */}
+      <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5" />
+              Sales Receipt
+            </DialogTitle>
+          </DialogHeader>
+          {currentReceipt && (
+            <ReceiptGenerator
+              receiptData={currentReceipt}
+              businessInfo={businessSettings}
+              onPrint={() => console.log('Receipt printed')}
+              onDownload={() => console.log('Receipt downloaded')}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

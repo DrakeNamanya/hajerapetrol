@@ -9,7 +9,150 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      business_settings: {
+        Row: {
+          address: string
+          business_name: string
+          email: string | null
+          id: string
+          phone: string
+          updated_at: string
+          updated_by: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string
+          business_name?: string
+          email?: string | null
+          id?: string
+          phone?: string
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          business_name?: string
+          email?: string | null
+          id?: string
+          phone?: string
+          updated_at?: string
+          updated_by?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          accountant_approved_at: string | null
+          amount: number
+          approved_by_accountant: string | null
+          approved_by_director: string | null
+          approved_by_manager: string | null
+          created_at: string
+          department: string
+          description: string
+          director_approved_at: string | null
+          id: string
+          manager_approved_at: string | null
+          rejection_reason: string | null
+          requested_by: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          accountant_approved_at?: string | null
+          amount: number
+          approved_by_accountant?: string | null
+          approved_by_director?: string | null
+          approved_by_manager?: string | null
+          created_at?: string
+          department: string
+          description: string
+          director_approved_at?: string | null
+          id?: string
+          manager_approved_at?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          accountant_approved_at?: string | null
+          amount?: number
+          approved_by_accountant?: string | null
+          approved_by_director?: string | null
+          approved_by_manager?: string | null
+          created_at?: string
+          department?: string
+          description?: string
+          director_approved_at?: string | null
+          id?: string
+          manager_approved_at?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      receipts: {
+        Row: {
+          amount_received: number | null
+          change_amount: number | null
+          created_at: string
+          created_by: string
+          customer_name: string | null
+          department: string
+          id: string
+          items: Json
+          payment_method: string
+          pump_number: string | null
+          receipt_number: string
+          subtotal: number
+          table_number: string | null
+          tax: number
+          total: number
+        }
+        Insert: {
+          amount_received?: number | null
+          change_amount?: number | null
+          created_at?: string
+          created_by: string
+          customer_name?: string | null
+          department: string
+          id?: string
+          items: Json
+          payment_method: string
+          pump_number?: string | null
+          receipt_number: string
+          subtotal: number
+          table_number?: string | null
+          tax: number
+          total: number
+        }
+        Update: {
+          amount_received?: number | null
+          change_amount?: number | null
+          created_at?: string
+          created_by?: string
+          customer_name?: string | null
+          department?: string
+          id?: string
+          items?: Json
+          payment_method?: string
+          pump_number?: string | null
+          receipt_number?: string
+          subtotal?: number
+          table_number?: string | null
+          tax?: number
+          total?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
