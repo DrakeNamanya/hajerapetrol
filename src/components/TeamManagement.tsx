@@ -17,7 +17,7 @@ type UserProfile = Database['public']['Tables']['profiles']['Row'];
 type TeamInvitation = Database['public']['Tables']['team_invitations']['Row'];
 
 export const TeamManagement: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<string>('');
   const [department, setDepartment] = useState<string>('');
@@ -63,6 +63,11 @@ export const TeamManagement: React.FC = () => {
       return;
     }
 
+    if (!user?.id) {
+      setError('User not authenticated');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
@@ -73,7 +78,8 @@ export const TeamManagement: React.FC = () => {
         .insert({
           email,
           role: role as any,
-          department: department as any
+          department: department as any,
+          invited_by: user.id
         });
 
       if (inviteError) {
