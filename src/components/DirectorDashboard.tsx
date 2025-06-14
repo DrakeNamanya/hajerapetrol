@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +12,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Fuel, Building2, UtensilsCrossed, AlertTriangle, CheckCircle, Settings, UserPlus, Edit } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Fuel, Building2, UtensilsCrossed, AlertTriangle, CheckCircle, Settings, UserPlus, Edit, FileText } from 'lucide-react';
 
 interface Sale {
   id: number;
@@ -141,6 +140,36 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     });
   }, [sales]);
 
+  // Calculate Profit & Loss Statement data
+  const profitLossData = React.useMemo(() => {
+    // Revenue by department from actual sales
+    const revenueByDept = {
+      fuel: sales.filter(s => s.department === 'fuel').reduce((sum, sale) => sum + sale.total, 0),
+      supermarket: sales.filter(s => s.department === 'supermarket').reduce((sum, sale) => sum + sale.total, 0),
+      restaurant: sales.filter(s => s.department === 'restaurant').reduce((sum, sale) => sum + sale.total, 0)
+    };
+
+    // Expenses by department from actual expenses data
+    const expensesByDept = {
+      fuel: expenses.filter(e => e.department.toLowerCase() === 'fuel' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0),
+      supermarket: expenses.filter(e => e.department.toLowerCase() === 'supermarket' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0),
+      restaurant: expenses.filter(e => e.department.toLowerCase() === 'restaurant' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0),
+      all: expenses.filter(e => e.department.toLowerCase() === 'all' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0)
+    };
+
+    const totalRevenue = Object.values(revenueByDept).reduce((sum, rev) => sum + rev, 0);
+    const totalExpenses = Object.values(expensesByDept).reduce((sum, exp) => sum + exp, 0);
+    const totalProfit = totalRevenue - totalExpenses;
+
+    return {
+      revenue: revenueByDept,
+      expenses: expensesByDept,
+      totalRevenue,
+      totalExpenses,
+      totalProfit
+    };
+  }, [sales, expenses]);
+
   const pieData = departmentPerformance.map(dept => ({
     name: dept.department,
     value: dept.revenue,
@@ -246,9 +275,10 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
           <TabsTrigger value="reports">Real Reports</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
@@ -407,6 +437,173 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="profit-loss" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-6 w-6" />
+                Profit & Loss Statement
+              </CardTitle>
+              <p className="text-sm text-gray-600">Financial overview showing revenue and expenses by department</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Revenue Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-green-700 border-b border-green-200 pb-2">
+                    REVENUE
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Fuel className="h-4 w-4 text-orange-600" />
+                        <span>Fuel Department</span>
+                      </div>
+                      <span className="font-semibold text-green-700">
+                        UGX {profitLossData.revenue.fuel.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-green-600" />
+                        <span>Supermarket Department</span>
+                      </div>
+                      <span className="font-semibold text-green-700">
+                        UGX {profitLossData.revenue.supermarket.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <UtensilsCrossed className="h-4 w-4 text-amber-600" />
+                        <span>Restaurant Department</span>
+                      </div>
+                      <span className="font-semibold text-green-700">
+                        UGX {profitLossData.revenue.restaurant.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="border-t border-green-300 pt-3">
+                      <div className="flex justify-between items-center font-bold text-green-800 text-lg">
+                        <span>Total Revenue</span>
+                        <span>UGX {profitLossData.totalRevenue.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expenses Section */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-red-700 border-b border-red-200 pb-2">
+                    EXPENSES
+                  </h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Fuel className="h-4 w-4 text-orange-600" />
+                        <span>Fuel Department</span>
+                      </div>
+                      <span className="font-semibold text-red-700">
+                        UGX {profitLossData.expenses.fuel.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-green-600" />
+                        <span>Supermarket Department</span>
+                      </div>
+                      <span className="font-semibold text-red-700">
+                        UGX {profitLossData.expenses.supermarket.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <UtensilsCrossed className="h-4 w-4 text-amber-600" />
+                        <span>Restaurant Department</span>
+                      </div>
+                      <span className="font-semibold text-red-700">
+                        UGX {profitLossData.expenses.restaurant.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4 text-gray-600" />
+                        <span>General/Administrative</span>
+                      </div>
+                      <span className="font-semibold text-red-700">
+                        UGX {profitLossData.expenses.all.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="border-t border-red-300 pt-3">
+                      <div className="flex justify-between items-center font-bold text-red-800 text-lg">
+                        <span>Total Expenses</span>
+                        <span>UGX {profitLossData.totalExpenses.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Profit Line */}
+              <div className="mt-8 pt-6 border-t-2 border-gray-400">
+                <div className={`flex justify-between items-center p-4 rounded-lg text-xl font-bold ${
+                  profitLossData.totalProfit >= 0 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  <span>Total Profit = Revenue - Expenses</span>
+                  <span className="text-2xl">
+                    UGX {profitLossData.totalProfit.toLocaleString()}
+                  </span>
+                </div>
+                {profitLossData.totalProfit < 0 && (
+                  <p className="text-sm text-red-600 mt-2 text-center">
+                    ⚠️ Business is running at a loss. Review expenses and optimize operations.
+                  </p>
+                )}
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <Card className="bg-blue-50">
+                  <CardContent className="p-4 text-center">
+                    <h4 className="font-semibold text-blue-800">Profit Margin</h4>
+                    <p className="text-xl font-bold text-blue-900">
+                      {profitLossData.totalRevenue > 0 
+                        ? ((profitLossData.totalProfit / profitLossData.totalRevenue) * 100).toFixed(1)
+                        : '0.0'
+                      }%
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-purple-50">
+                  <CardContent className="p-4 text-center">
+                    <h4 className="font-semibold text-purple-800">Expense Ratio</h4>
+                    <p className="text-xl font-bold text-purple-900">
+                      {profitLossData.totalRevenue > 0 
+                        ? ((profitLossData.totalExpenses / profitLossData.totalRevenue) * 100).toFixed(1)
+                        : '0.0'
+                      }%
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-indigo-50">
+                  <CardContent className="p-4 text-center">
+                    <h4 className="font-semibold text-indigo-800">Best Performer</h4>
+                    <p className="text-xl font-bold text-indigo-900">
+                      {Object.entries(profitLossData.revenue)
+                        .reduce((a, b) => a[1] > b[1] ? a : b)[0]
+                        .charAt(0).toUpperCase() + 
+                       Object.entries(profitLossData.revenue)
+                        .reduce((a, b) => a[1] > b[1] ? a : b)[0]
+                        .slice(1)
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
