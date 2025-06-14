@@ -9,19 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { ExpenseTracker } from './ExpenseTracker';
-
-interface Sale {
-  id: number;
-  department: string;
-  type: string;
-  customer: string;
-  items: any[];
-  total: number;
-  paymentMethod: string;
-  timestamp: Date;
-  status: string;
-  tableNumber?: string;
-}
+import { useSales } from '@/hooks/useSales';
 
 interface Expense {
   id: number;
@@ -34,52 +22,19 @@ interface Expense {
 }
 
 interface AccountantDashboardProps {
-  sales: Sale[];
-  onApprove: (saleId: number) => void;
   expenses?: Expense[];
 }
 
-// Department sales data using actual sales data with different time periods
-const getDepartmentSalesData = (sales: Sale[], period: string) => {
-  const now = new Date();
-  let filteredSales = sales.filter(sale => sale.status === 'approved' || sale.status === 'accountant_approved');
-  
-  // Filter sales based on selected period
-  if (period === 'day') {
-    filteredSales = filteredSales.filter(sale => 
-      sale.timestamp.toDateString() === now.toDateString()
-    );
-  } else if (period === 'week') {
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    filteredSales = filteredSales.filter(sale => sale.timestamp >= weekAgo);
-  } else if (period === 'month') {
-    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-    filteredSales = filteredSales.filter(sale => sale.timestamp >= monthAgo);
-  } else if (period === 'year') {
-    const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-    filteredSales = filteredSales.filter(sale => sale.timestamp >= yearAgo);
-  }
-
-  const departmentTotals = filteredSales.reduce((acc, sale) => {
-    acc[sale.department] = (acc[sale.department] || 0) + sale.total;
-    return acc;
-  }, {} as Record<string, number>);
-
-  return [
-    { department: 'Supermarket', amount: departmentTotals.supermarket || 0 },
-    { department: 'Restaurant', amount: departmentTotals.restaurant || 0 },
-    { department: 'Fuel', amount: departmentTotals.fuel || 0 },
-  ];
-};
-
 export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ 
-  sales, 
-  onApprove, 
   expenses = [] 
 }) => {
   const [chartPeriod, setChartPeriod] = useState('week');
+  const { sales, updateSaleStatus, isUpdatingSale } = useSales();
+
+  // Filter sales by status
   const pendingSales = sales.filter(sale => sale.status === 'pending');
-  const approvedSales = sales.filter(sale => sale.status === 'accountant_approved' || sale.status === 'approved');
+  const accountantApprovedSales = sales.filter(sale => sale.status === 'accountant_approved');
+  const fullyApprovedSales = sales.filter(sale => sale.status === 'approved');
   const pendingExpenses = expenses.filter(expense => expense.status === 'pending');
 
   const getDepartmentColor = (department: string) => {
@@ -91,15 +46,54 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
     }
   };
 
-  const handleApprove = (saleId: number) => {
-    onApprove(saleId);
-    toast({
-      title: "Sale Approved",
-      description: "Sale has been approved and sent to manager for final approval",
+  const handleApproveSale = (saleId: string) => {
+    updateSaleStatus({
+      saleId,
+      status: 'accountant_approved',
+      approvalType: 'accountant'
     });
   };
 
-  const salesChartData = getDepartmentSalesData(sales, chartPeriod);
+  const formatSaleItems = (items: any) => {
+    if (!Array.isArray(items)) return [];
+    return items;
+  };
+
+  // Department sales data using actual sales data
+  const getDepartmentSalesData = (period: string) => {
+    const now = new Date();
+    let filteredSales = sales.filter(sale => 
+      sale.status === 'approved' || sale.status === 'accountant_approved'
+    );
+    
+    if (period === 'day') {
+      filteredSales = filteredSales.filter(sale => 
+        new Date(sale.created_at).toDateString() === now.toDateString()
+      );
+    } else if (period === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      filteredSales = filteredSales.filter(sale => new Date(sale.created_at) >= weekAgo);
+    } else if (period === 'month') {
+      const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      filteredSales = filteredSales.filter(sale => new Date(sale.created_at) >= monthAgo);
+    } else if (period === 'year') {
+      const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+      filteredSales = filteredSales.filter(sale => new Date(sale.created_at) >= yearAgo);
+    }
+
+    const departmentTotals = filteredSales.reduce((acc, sale) => {
+      acc[sale.department] = (acc[sale.department] || 0) + Number(sale.total);
+      return acc;
+    }, {} as Record<string, number>);
+
+    return [
+      { department: 'Supermarket', amount: departmentTotals.supermarket || 0 },
+      { department: 'Restaurant', amount: departmentTotals.restaurant || 0 },
+      { department: 'Fuel', amount: departmentTotals.fuel || 0 },
+    ];
+  };
+
+  const salesChartData = getDepartmentSalesData(chartPeriod);
 
   return (
     <div className="space-y-6">
@@ -124,7 +118,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
               <CardContent className="p-6">
                 <div className="text-2xl font-bold text-green-600">
-                  {approvedSales.length}
+                  {accountantApprovedSales.length}
                 </div>
                 <p className="text-green-600 font-medium">Approved by Me</p>
               </CardContent>
@@ -133,7 +127,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
               <CardContent className="p-6">
                 <div className="text-2xl font-bold text-purple-600">
-                  UGX {pendingSales.reduce((sum, sale) => sum + sale.total, 0).toLocaleString()}
+                  UGX {pendingSales.reduce((sum, sale) => sum + Number(sale.total), 0).toLocaleString()}
                 </div>
                 <p className="text-purple-600 font-medium">Value Pending</p>
               </CardContent>
@@ -146,53 +140,60 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pendingSales.map(sale => (
-                  <div key={sale.id} className="border rounded-lg p-4 bg-yellow-50">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getDepartmentColor(sale.department)}>
-                            {sale.department.toUpperCase()}
-                          </Badge>
-                          <span className="text-sm text-gray-600">
-                            {sale.timestamp.toLocaleString()}
-                          </span>
-                        </div>
-                        <p className="font-medium">{sale.customer}</p>
-                        {sale.tableNumber && (
-                          <p className="text-sm text-gray-600">Table: {sale.tableNumber}</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-orange-600">
-                          UGX {sale.total.toLocaleString()}
-                        </div>
-                        <p className="text-sm text-gray-600">{sale.paymentMethod}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <h4 className="font-medium mb-2">Items:</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {sale.items.map((item, index) => (
-                          <div key={index} className="text-sm bg-white p-2 rounded border">
-                            <span className="font-medium">{item.name}</span>
-                            <span className="text-gray-600 ml-2">
-                              {item.quantity} × UGX {item.price.toLocaleString()} = UGX {item.total.toLocaleString()}
+                {pendingSales.map(sale => {
+                  const items = formatSaleItems(sale.items);
+                  return (
+                    <div key={sale.id} className="border rounded-lg p-4 bg-yellow-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className={getDepartmentColor(sale.department)}>
+                              {sale.department.toUpperCase()}
+                            </Badge>
+                            <span className="text-sm text-gray-600">
+                              {new Date(sale.created_at).toLocaleString()}
                             </span>
                           </div>
-                        ))}
+                          <p className="font-medium">{sale.customer_name || 'Walk-in Customer'}</p>
+                          {sale.table_number && (
+                            <p className="text-sm text-gray-600">Table: {sale.table_number}</p>
+                          )}
+                          {sale.pump_number && (
+                            <p className="text-sm text-gray-600">Pump: {sale.pump_number}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-orange-600">
+                            UGX {Number(sale.total).toLocaleString()}
+                          </div>
+                          <p className="text-sm text-gray-600">{sale.payment_method}</p>
+                        </div>
                       </div>
-                    </div>
+                      
+                      <div className="mb-3">
+                        <h4 className="font-medium mb-2">Items:</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {items.map((item: any, index: number) => (
+                            <div key={index} className="text-sm bg-white p-2 rounded border">
+                              <span className="font-medium">{item.name}</span>
+                              <span className="text-gray-600 ml-2">
+                                {item.quantity} × UGX {Number(item.price).toLocaleString()} = UGX {Number(item.total).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                    <Button 
-                      onClick={() => handleApprove(sale.id)}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                    >
-                      Approve & Send to Manager
-                    </Button>
-                  </div>
-                ))}
+                      <Button 
+                        onClick={() => handleApproveSale(sale.id)}
+                        className="w-full bg-blue-600 hover:bg-blue-700"
+                        disabled={isUpdatingSale}
+                      >
+                        {isUpdatingSale ? 'Processing...' : 'Approve & Send to Manager'}
+                      </Button>
+                    </div>
+                  );
+                })}
                 
                 {pendingSales.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
@@ -209,25 +210,28 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {approvedSales.slice(-10).reverse().map(sale => (
-                  <div key={sale.id} className="flex justify-between items-center border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className={getDepartmentColor(sale.department)}>
-                        {sale.department.toUpperCase()}
-                      </Badge>
-                      <span className="font-medium">{sale.customer}</span>
-                      <span className="text-sm text-gray-600">
-                        {sale.timestamp.toLocaleString()}
-                      </span>
-                      <Badge variant={sale.status === 'approved' ? 'default' : 'secondary'}>
-                        {sale.status === 'approved' ? 'Manager Approved' : 'Sent to Manager'}
-                      </Badge>
+                {[...accountantApprovedSales, ...fullyApprovedSales]
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .slice(0, 10)
+                  .map(sale => (
+                    <div key={sale.id} className="flex justify-between items-center border-b pb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge className={getDepartmentColor(sale.department)}>
+                          {sale.department.toUpperCase()}
+                        </Badge>
+                        <span className="font-medium">{sale.customer_name || 'Walk-in'}</span>
+                        <span className="text-sm text-gray-600">
+                          {new Date(sale.created_at).toLocaleString()}
+                        </span>
+                        <Badge variant={sale.status === 'approved' ? 'default' : 'secondary'}>
+                          {sale.status === 'approved' ? 'Manager Approved' : 'Sent to Manager'}
+                        </Badge>
+                      </div>
+                      <div className="font-semibold text-green-600">
+                        UGX {Number(sale.total).toLocaleString()}
+                      </div>
                     </div>
-                    <div className="font-semibold text-green-600">
-                      UGX {sale.total.toLocaleString()}
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </CardContent>
           </Card>
