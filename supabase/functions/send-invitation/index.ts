@@ -24,14 +24,9 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('Edge function started');
     
-    // Check if API key exists
-    const apiKey = Deno.env.get("RESEND_API_KEY");
-    console.log('API key exists:', !!apiKey);
-    
-    if (!apiKey) {
-      console.error('RESEND_API_KEY environment variable is not set');
-      throw new Error('Email service not configured. Please contact administrator.');
-    }
+    // Use the API key directly for now
+    const apiKey = "re_7BNBJN1e_ETaUfmqz2oTJU88eTSZAF11c";
+    console.log('Using API key');
 
     const resend = new Resend(apiKey);
 
