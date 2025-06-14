@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
 type UserProfile = Database['public']['Tables']['profiles']['Row'];
+type UserRole = Database['public']['Enums']['user_role'];
 
 interface Sale {
   id: number;
@@ -164,7 +165,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     }
   };
 
-  const handleUpdateUserRole = async (userId: string, newRole: string) => {
+  const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -181,7 +182,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
       } else {
         setTeamMembers(prev => prev.map(member => 
           member.id === userId 
-            ? { ...member, role: newRole as any }
+            ? { ...member, role: newRole }
             : member
         ));
         toast({
@@ -874,7 +875,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
                         <TableCell>
                           <Select 
                             value={member.role} 
-                            onValueChange={(value) => handleUpdateUserRole(member.id, value)}
+                            onValueChange={(value: UserRole) => handleUpdateUserRole(member.id, value)}
                             disabled={member.role === 'director'}
                           >
                             <SelectTrigger className="w-auto">
