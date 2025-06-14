@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +16,23 @@ export const AuthPage: React.FC = () => {
   const [localError, setLocalError] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [profileLoadingTimeout, setProfileLoadingTimeout] = useState(false);
 
-  // If user is authenticated but profile is still loading, show loading state
-  if (user && !profile && !error) {
+  // Set a timeout for profile loading to prevent infinite loading
+  useEffect(() => {
+    if (user && !profile && !error) {
+      const timeout = setTimeout(() => {
+        setProfileLoadingTimeout(true);
+      }, 10000); // 10 seconds timeout
+
+      return () => clearTimeout(timeout);
+    } else {
+      setProfileLoadingTimeout(false);
+    }
+  }, [user, profile, error]);
+
+  // If user is authenticated but profile is still loading, show loading state with timeout
+  if (user && !profile && !error && !profileLoadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
         <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
@@ -27,6 +40,27 @@ export const AuthPage: React.FC = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
             <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
             <p className="text-gray-600">Please wait while we prepare your dashboard.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // If profile loading timed out, show error
+  if (user && !profile && profileLoadingTimeout) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
+        <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2 text-red-600">Setup Taking Too Long</h2>
+            <p className="text-gray-600 mb-4">Your account setup is taking longer than expected.</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+            >
+              Try Again
+            </Button>
           </CardContent>
         </Card>
       </div>

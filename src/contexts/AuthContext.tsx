@@ -62,6 +62,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         
+        // After max retries, clear loading state and set error
+        setLoading(false);
         setError('Failed to load user profile');
         return;
       }
@@ -69,8 +71,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Profile fetched successfully:', data);
       setProfile(data);
       setError(null);
+      setLoading(false);
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
+      setLoading(false);
       setError('Failed to load user profile');
     }
   };
@@ -104,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (mounted) {
                   fetchUserProfile(session.user.id);
                 }
-              }, 100); // Slightly longer delay for new signups
+              }, 500); // Longer delay to ensure profile is created
             }
             break;
             
@@ -113,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(null);
             setProfile(null);
             setError(null);
+            setLoading(false);
             break;
             
           case 'TOKEN_REFRESHED':
@@ -131,9 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!session) {
           setProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
@@ -152,16 +156,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (recoveredSession.user) {
               fetchUserProfile(recoveredSession.user.id);
             }
+          } else {
+            setLoading(false);
           }
         } else if (session && mounted) {
           setSession(session);
           setUser(session.user);
           if (session.user) {
             fetchUserProfile(session.user.id);
+          } else {
+            setLoading(false);
           }
-        }
-        
-        if (mounted) {
+        } else {
           setLoading(false);
         }
       } catch (error) {
@@ -242,17 +248,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         setError(error.message);
+        setLoading(false);
       } else if (data.user) {
-        // Don't force reload immediately, let the auth state change handler manage it
+        // Don't set loading to false here, let the auth state change handler manage it
         console.log('Sign in successful, waiting for profile...');
       }
       
       return { error };
     } catch (error: any) {
       setError(error.message || 'Sign in failed');
-      return { error };
-    } finally {
       setLoading(false);
+      return { error };
     }
   };
 
