@@ -6,11 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Package, AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Package, AlertTriangle, Calculator, BarChart3, Scan } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { AddItemDialog } from './AddItemDialog';
 import { EditItemDialog } from './EditItemDialog';
+import { BarcodeScanner } from './BarcodeScanner';
+import { BatchStockUpdate } from './BatchStockUpdate';
+import { InventoryValuationReport } from './InventoryValuationReport';
+import { SupplierAnalytics } from './SupplierAnalytics';
+import { AutoReorderCalculator } from './AutoReorderCalculator';
 
 interface InventoryItem {
   id: string;
@@ -92,127 +98,165 @@ export const InventoryItems: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Inventory Items
-            </CardTitle>
-            <Button onClick={() => setShowAddDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Item
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="flex gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search items or SKU..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="fuel">Fuel</SelectItem>
-                <SelectItem value="supermarket">Supermarket</SelectItem>
-                <SelectItem value="restaurant">Restaurant</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Items Overview</TabsTrigger>
+          <TabsTrigger value="scanner">Barcode Scanner</TabsTrigger>
+          <TabsTrigger value="batch">Batch Update</TabsTrigger>
+          <TabsTrigger value="valuation">Valuation</TabsTrigger>
+          <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+          <TabsTrigger value="reorder">Auto Reorder</TabsTrigger>
+        </TabsList>
 
-          {/* Items Table */}
-          <div className="border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item Details</TableHead>
-                  <TableHead>Stock Level</TableHead>
-                  <TableHead>Pricing</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredItems.map((item) => {
-                  const stockStatus = getStockStatus(item);
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {item.sku} • {item.category} • {item.department}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Supplier: {item.supplier_name}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{item.current_stock}</span>
-                            <span className="text-sm text-gray-500">{item.unit_of_measure}</span>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Min: {item.minimum_stock} | Max: {item.maximum_stock}
-                          </div>
-                          {item.current_stock <= item.minimum_stock && (
-                            <div className="flex items-center gap-1 text-orange-600">
-                              <AlertTriangle className="h-3 w-3" />
-                              <span className="text-xs">Below minimum</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm">
-                            <span className="text-gray-500">Sale:</span> UGX {item.unit_price.toLocaleString()}
-                          </div>
-                          <div className="text-sm">
-                            <span className="text-gray-500">Cost:</span> UGX {item.cost_price.toLocaleString()}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={stockStatus.variant}>
-                          {stockStatus.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          Edit
-                        </Button>
-                      </TableCell>
+        <TabsContent value="overview">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Inventory Items
+                </CardTitle>
+                <Button onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Filters */}
+              <div className="flex gap-4 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search items or SKU..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    <SelectItem value="fuel">Fuel</SelectItem>
+                    <SelectItem value="supermarket">Supermarket</SelectItem>
+                    <SelectItem value="restaurant">Restaurant</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Items Table */}
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Item Details</TableHead>
+                      <TableHead>Stock Level</TableHead>
+                      <TableHead>Pricing</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredItems.map((item) => {
+                      const stockStatus = getStockStatus(item);
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{item.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {item.sku} • {item.category} • {item.department}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Supplier: {item.supplier_name}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{item.current_stock}</span>
+                                <span className="text-sm text-gray-500">{item.unit_of_measure}</span>
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Min: {item.minimum_stock} | Max: {item.maximum_stock}
+                              </div>
+                              {item.current_stock <= item.minimum_stock && (
+                                <div className="flex items-center gap-1 text-orange-600">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  <span className="text-xs">Below minimum</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="text-sm">
+                                <span className="text-gray-500">Sale:</span> UGX {item.unit_price.toLocaleString()}
+                              </div>
+                              <div className="text-sm">
+                                <span className="text-gray-500">Cost:</span> UGX {item.cost_price.toLocaleString()}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={stockStatus.variant}>
+                              {stockStatus.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingItem(item)}
+                            >
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
-          {filteredItems.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No items found matching your search criteria.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {filteredItems.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  No items found matching your search criteria.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="scanner">
+          <BarcodeScanner onItemFound={(item) => {
+            toast({
+              title: "Item Scanned",
+              description: `Found: ${item.name} - Stock: ${item.current_stock}`,
+            });
+          }} />
+        </TabsContent>
+
+        <TabsContent value="batch">
+          <BatchStockUpdate />
+        </TabsContent>
+
+        <TabsContent value="valuation">
+          <InventoryValuationReport />
+        </TabsContent>
+
+        <TabsContent value="suppliers">
+          <SupplierAnalytics />
+        </TabsContent>
+
+        <TabsContent value="reorder">
+          <AutoReorderCalculator />
+        </TabsContent>
+      </Tabs>
 
       <AddItemDialog
         open={showAddDialog}
