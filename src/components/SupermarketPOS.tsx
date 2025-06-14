@@ -80,7 +80,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     expiryDate: ''
   });
   
-  const { businessSettings, generateReceiptNumber, saveReceipt } = useReceipts();
+  const { generateReceiptNumber, saveReceipt } = useReceipts();
   const { createSale, isCreatingSale, sales, getSalesSummary } = useSales();
 
   const addToCart = (product: Product) => {
@@ -880,7 +880,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
           {currentReceipt && (
             <ReceiptGenerator
               receiptData={currentReceipt}
-              businessInfo={businessSettings}
               onPrint={() => console.log('Receipt printed')}
               onDownload={() => console.log('Receipt downloaded')}
             />

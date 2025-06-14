@@ -35,14 +35,6 @@ const weeklyData = [
   { day: 'Sun', sales: 3100000 },
 ];
 
-const businessInfo = {
-  businessName: "DataCollectors Fuel Station",
-  address: "123 Main Street, Kampala, Uganda",
-  phone: "+256 700 123 456",
-  email: "info@datacollectors.com",
-  website: "www.datacollectors.com"
-};
-
 export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const [fuelTypes, setFuelTypes] = useState(initialFuelTypes);
   const [selectedFuel, setSelectedFuel] = useState('');
@@ -181,7 +173,6 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
     return (
       <ReceiptGenerator
         receiptData={lastReceiptData}
-        businessInfo={businessInfo}
         onPrint={handleReceiptClose}
         onDownload={handleReceiptClose}
       />
