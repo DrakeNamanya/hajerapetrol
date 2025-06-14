@@ -16,16 +16,17 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'manager' | 'accountant' | 'fuel_cashier' | 'supermarket_cashier' | 'restaurant_cashier';
-  department: 'management' | 'accounting' | 'fuel' | 'supermarket' | 'restaurant';
+  role: 'director' | 'manager' | 'accountant' | 'fuel_cashier' | 'supermarket_cashier' | 'restaurant_cashier';
+  department: 'executive' | 'management' | 'accounting' | 'fuel' | 'supermarket' | 'restaurant';
 }
 
 const users: User[] = [
-  { id: '1', email: 'manager@company.com', name: 'John Manager', role: 'manager', department: 'management' },
-  { id: '2', email: 'accountant@company.com', name: 'Sarah Accountant', role: 'accountant', department: 'accounting' },
-  { id: '3', email: 'fuel@company.com', name: 'Mike Fuel', role: 'fuel_cashier', department: 'fuel' },
-  { id: '4', email: 'supermarket@company.com', name: 'Lisa Market', role: 'supermarket_cashier', department: 'supermarket' },
-  { id: '5', email: 'restaurant@company.com', name: 'Tom Chef', role: 'restaurant_cashier', department: 'restaurant' },
+  { id: '1', email: 'director@hipemartoils.com', name: 'James Director', role: 'director', department: 'executive' },
+  { id: '2', email: 'manager@hipemartoils.com', name: 'John Manager', role: 'manager', department: 'management' },
+  { id: '3', email: 'accountant@hipemartoils.com', name: 'Sarah Accountant', role: 'accountant', department: 'accounting' },
+  { id: '4', email: 'fuel@hipemartoils.com', name: 'Mike Fuel', role: 'fuel_cashier', department: 'fuel' },
+  { id: '5', email: 'supermarket@hipemartoils.com', name: 'Lisa Market', role: 'supermarket_cashier', department: 'supermarket' },
+  { id: '6', email: 'restaurant@hipemartoils.com', name: 'Tom Chef', role: 'restaurant_cashier', department: 'restaurant' },
 ];
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {

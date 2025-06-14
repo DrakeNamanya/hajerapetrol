@@ -6,6 +6,7 @@ import { SupermarketPOS } from '@/components/SupermarketPOS';
 import { RestaurantPOS } from '@/components/RestaurantPOS';
 import { ManagerDashboard } from '@/components/ManagerDashboard';
 import { AccountantDashboard } from '@/components/AccountantDashboard';
+import { DirectorDashboard } from '@/components/DirectorDashboard';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -15,8 +16,8 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'manager' | 'accountant' | 'fuel_cashier' | 'supermarket_cashier' | 'restaurant_cashier';
-  department: 'management' | 'accounting' | 'fuel' | 'supermarket' | 'restaurant';
+  role: 'director' | 'manager' | 'accountant' | 'fuel_cashier' | 'supermarket_cashier' | 'restaurant_cashier';
+  department: 'executive' | 'management' | 'accounting' | 'fuel' | 'supermarket' | 'restaurant';
 }
 
 interface Sale {
@@ -78,6 +79,7 @@ const Index = () => {
 
   const getDepartmentColor = (department: string) => {
     switch (department) {
+      case 'executive': return 'from-purple-600 to-indigo-600';
       case 'management': return 'from-blue-600 to-purple-600';
       case 'accounting': return 'from-green-600 to-teal-600';
       case 'fuel': return 'from-orange-600 to-red-600';
@@ -134,6 +136,19 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8 relative z-10">
+        {/* Dashboard for Director */}
+        {currentUser.role === 'director' && (
+          <div>
+            <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl">Executive Dashboard</CardTitle>
+                <p className="text-gray-600">Strategic overview of all business operations</p>
+              </CardHeader>
+            </Card>
+            <DirectorDashboard sales={sales} />
+          </div>
+        )}
+
         {/* Dashboard for Manager */}
         {currentUser.role === 'manager' && (
           <div>
