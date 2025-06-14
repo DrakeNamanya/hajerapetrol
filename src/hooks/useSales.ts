@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +46,57 @@ export const useSales = () => {
     enabled: !!user,
   });
 
+  // Set up real-time subscription for sales updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('sales-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'sales'
+        },
+        (payload) => {
+          console.log('Real-time sales update:', payload);
+          
+          // Invalidate and refetch sales data
+          queryClient.invalidateQueries({ queryKey: ['sales'] });
+          
+          // Show toast notification based on the event type
+          if (payload.eventType === 'INSERT') {
+            const newSale = payload.new as any;
+            toast({
+              title: "New Sale Created",
+              description: `${newSale.department.toUpperCase()} - UGX ${Number(newSale.total).toLocaleString()}`,
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedSale = payload.new as any;
+            if (updatedSale.status === 'accountant_approved') {
+              toast({
+                title: "Sale Approved by Accountant",
+                description: `Sale UGX ${Number(updatedSale.total).toLocaleString()} sent to manager`,
+              });
+            } else if (updatedSale.status === 'approved') {
+              toast({
+                title: "Sale Fully Approved",
+                description: `Sale UGX ${Number(updatedSale.total).toLocaleString()} completed`,
+                variant: "default",
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
   // Create a new sale
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: CreateSaleData) => {
@@ -75,7 +126,7 @@ export const useSales = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      // Note: Real-time subscription will handle the data refresh
       toast({
         title: "Sale Recorded",
         description: "Sale has been successfully saved to database",
@@ -125,7 +176,7 @@ export const useSales = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      // Note: Real-time subscription will handle the data refresh
       toast({
         title: "Sale Updated",
         description: "Sale status has been updated",

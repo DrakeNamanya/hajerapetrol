@@ -16,6 +16,7 @@ import { TeamManagement } from '@/components/TeamManagement';
 import { Fuel, ShoppingCart, UtensilsCrossed, Calculator, Users, Building, CheckCircle, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { RealtimeNotifications } from '@/components/RealtimeNotifications';
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
@@ -167,6 +168,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Real-time notifications - only show for accountants, managers, and directors */}
+      {(profile?.role === 'accountant' || profile?.role === 'manager' || profile?.role === 'director') && (
+        <RealtimeNotifications />
+      )}
+      
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
