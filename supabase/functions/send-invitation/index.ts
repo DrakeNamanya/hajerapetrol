@@ -37,6 +37,9 @@ const handler = async (req: Request): Promise<Response> => {
     const roleDisplay = role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
     const departmentDisplay = department.charAt(0).toUpperCase() + department.slice(1);
 
+    // Get the application URL - you can customize this based on your deployment
+    const appUrl = "https://id-preview--f49e1457-bccf-4906-b3ff-cde5c8c01dc1.lovable.app";
+
     const emailResponse = await resend.emails.send({
       from: `${businessName} <onboarding@resend.dev>`,
       to: [email],
@@ -52,9 +55,11 @@ const handler = async (req: Request): Promise<Response> => {
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
             .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-            .button { display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 12px 30px; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 12px 30px; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+            .button:hover { background: #5a6fd8; }
             .info-box { background: white; padding: 20px; border-radius: 5px; border-left: 4px solid #667eea; margin: 20px 0; }
             .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .cta-section { text-align: center; margin: 30px 0; }
           </style>
         </head>
         <body>
@@ -77,10 +82,16 @@ const handler = async (req: Request): Promise<Response> => {
                 </ul>
               </div>
               
+              <div class="cta-section">
+                <p><strong>Ready to get started?</strong></p>
+                <a href="${appUrl}" class="button">Join ${businessName} Team</a>
+                <p><small>Click the button above to access the registration page</small></p>
+              </div>
+              
               <p>To accept this invitation and create your account:</p>
               
               <ol>
-                <li>Visit the ${businessName} application</li>
+                <li>Click the "Join ${businessName} Team" button above, or visit: <br><a href="${appUrl}">${appUrl}</a></li>
                 <li>Click "Sign Up" and use <strong>this exact email address</strong>: <code>${email}</code></li>
                 <li>Complete the registration process</li>
                 <li>You'll automatically be assigned your role and department</li>
@@ -100,6 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             <div class="footer">
               <p>This is an automated invitation email from ${businessName}.</p>
+              <p>If you have trouble with the button above, copy and paste this link: ${appUrl}</p>
             </div>
           </div>
         </body>
