@@ -186,6 +186,78 @@ export type Database = {
         }
         Relationships: []
       }
+      sales: {
+        Row: {
+          accountant_approved_at: string | null
+          amount_received: number | null
+          approved_by_accountant: string | null
+          approved_by_manager: string | null
+          change_amount: number | null
+          created_at: string
+          created_by: string
+          customer_name: string | null
+          department: string
+          id: string
+          items: Json
+          manager_approved_at: string | null
+          payment_method: string
+          pump_number: string | null
+          sale_type: string
+          status: string
+          subtotal: number
+          table_number: string | null
+          tax: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          accountant_approved_at?: string | null
+          amount_received?: number | null
+          approved_by_accountant?: string | null
+          approved_by_manager?: string | null
+          change_amount?: number | null
+          created_at?: string
+          created_by: string
+          customer_name?: string | null
+          department: string
+          id?: string
+          items: Json
+          manager_approved_at?: string | null
+          payment_method: string
+          pump_number?: string | null
+          sale_type: string
+          status?: string
+          subtotal?: number
+          table_number?: string | null
+          tax?: number
+          total: number
+          updated_at?: string
+        }
+        Update: {
+          accountant_approved_at?: string | null
+          amount_received?: number | null
+          approved_by_accountant?: string | null
+          approved_by_manager?: string | null
+          change_amount?: number | null
+          created_at?: string
+          created_by?: string
+          customer_name?: string | null
+          department?: string
+          id?: string
+          items?: Json
+          manager_approved_at?: string | null
+          payment_method?: string
+          pump_number?: string | null
+          sale_type?: string
+          status?: string
+          subtotal?: number
+          table_number?: string | null
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_invitations: {
         Row: {
           accepted_at: string | null

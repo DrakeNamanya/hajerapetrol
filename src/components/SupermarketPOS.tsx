@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Building2, ShoppingCart, Plus, Minus, Package, AlertTriangle, TrendingUp, TrendingDown, Clock, BarChart3, Receipt } from 'lucide-react';
+import { Building2, ShoppingCart, Plus, Minus, Package, AlertTriangle, TrendingUp, TrendingDown, Clock, BarChart3, Receipt, Database } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ReceiptGenerator } from './ReceiptGenerator';
 import { useReceipts } from '@/hooks/useReceipts';
+import { useSales } from '@/hooks/useSales';
 
 interface Product {
   id: string;
@@ -63,9 +64,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const [productSearch, setProductSearch] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [dailySales, setDailySales] = useState<Sale[]>([]);
-  const [salesSubmitted, setSalesSubmitted] = useState(false);
-  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState<any>(null);
   
@@ -80,6 +78,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   });
   
   const { businessSettings, generateReceiptNumber, saveReceipt } = useReceipts();
+  const { createSale, isCreatingSale, sales, getSalesSummary } = useSales();
 
   const addToCart = (product: Product) => {
     const existingItem = cart.find(item => item.id === product.id);
@@ -274,6 +273,26 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       timestamp: new Date()
     };
 
+    // Save to database using the new sales hook
+    const saleData = {
+      department: 'supermarket' as const,
+      sale_type: 'grocery_sale',
+      customer_name: 'Walk-in Customer',
+      items: cart.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total
+      })),
+      subtotal,
+      tax,
+      total,
+      payment_method: paymentMethod,
+    };
+
+    createSale(saleData);
+
+    // Save receipt
     const receiptSaved = await saveReceipt(receiptData);
     
     if (receiptSaved) {
@@ -281,14 +300,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       setShowReceipt(true);
     }
 
-    const sale: Sale = {
-      id: Date.now(),
-      items: cart,
-      total,
-      paymentMethod,
-      timestamp: new Date()
-    };
-
+    // Update product stock
     setProducts(prev => prev.map(product => {
       const cartItem = cart.find(item => item.id === product.id);
       if (cartItem) {
@@ -301,10 +313,13 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       return product;
     }));
 
-    setDailySales(prev => [...prev, sale]);
+    // Clear cart and payment method
+    setCart([]);
+    setPaymentMethod('');
 
+    // Still call the legacy onSaleRecord for backward compatibility
     const globalSale = {
-      id: sale.id,
+      id: Date.now(),
       department: 'supermarket',
       type: 'grocery_sale',
       customer: 'Walk-in Customer',
@@ -314,16 +329,13 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
         price: item.price,
         total: item.total
       })),
-      total: sale.total,
-      paymentMethod: sale.paymentMethod,
-      timestamp: sale.timestamp,
+      total,
+      paymentMethod,
+      timestamp: new Date(),
       status: 'pending'
     };
 
     onSaleRecord(globalSale);
-
-    setCart([]);
-    setPaymentMethod('');
 
     toast({
       title: "Sale Completed",
@@ -358,6 +370,9 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
   const dailyTotal = dailySales.reduce((sum, sale) => sum + sale.total, 0);
 
+  // Get database sales summary
+  const dbSalesSummary = getSalesSummary();
+
   // Reports data with updated logic
   const lowStockProducts = products.filter(p => p.stock < 20);
   const mostSellingProducts = [...products].sort((a, b) => b.salesCount - a.salesCount).slice(0, 5);
@@ -384,10 +399,11 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="sales">Sales</TabsTrigger>
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
+          <TabsTrigger value="database">Database</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="space-y-4">
@@ -525,8 +541,9 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
                   <Button 
                     onClick={handleSale}
                     className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    disabled={isCreatingSale}
                   >
-                    Complete Sale & Generate Receipt
+                    {isCreatingSale ? 'Processing...' : 'Complete Sale & Save to Database'}
                   </Button>
                 </div>
               )}
@@ -535,51 +552,32 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
 
           <Card>
             <CardHeader>
-              <CardTitle>Daily Sales Summary</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Database Sales Summary
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="bg-green-50 p-4 rounded-lg mb-4">
-                <div className="flex justify-between items-center text-lg font-semibold">
-                  <span>Today's Total Sales:</span>
-                  <span className="text-green-600">UGX {dailyTotal.toLocaleString()}</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {dailySales.length} transactions completed
-                </p>
-              </div>
-
-              {!salesSubmitted ? (
-                <Button 
-                  onClick={submitDailySales}
-                  className="w-full"
-                  disabled={dailySales.length === 0}
-                >
-                  Submit Daily Sales to Accountant
-                </Button>
-              ) : (
-                <div className="text-center">
-                  <Badge variant={approvalStatus === 'approved' ? 'default' : approvalStatus === 'rejected' ? 'destructive' : 'secondary'}>
-                    {approvalStatus === 'pending' && 'Awaiting Approval'}
-                    {approvalStatus === 'approved' && 'Approved'}
-                    {approvalStatus === 'rejected' && 'Rejected'}
-                  </Badge>
-                </div>
-              )}
-
-              {dailySales.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-medium mb-2">Today's Transactions</h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {dailySales.map(sale => (
-                      <div key={sale.id} className="flex justify-between items-center text-sm border-b pb-1">
-                        <span>{sale.timestamp.toLocaleTimeString()}</span>
-                        <span>UGX {sale.total.toLocaleString()}</span>
-                        <span className="text-gray-600">{sale.paymentMethod}</span>
-                      </div>
-                    ))}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex justify-between">
+                    <span>Today's Sales:</span>
+                    <span className="text-green-600 font-semibold">UGX {dbSalesSummary.totalSales.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Transactions:</span>
+                    <span className="font-semibold">{dbSalesSummary.salesCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Pending:</span>
+                    <Badge variant="secondary">{dbSalesSummary.pendingSales}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Approved:</span>
+                    <Badge variant="default">{dbSalesSummary.approvedSales}</Badge>
                   </div>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -809,6 +807,50 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
                   ))}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Recent Sales from Database
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sales.slice(0, 10).map(sale => (
+                    <TableRow key={sale.id}>
+                      <TableCell>{new Date(sale.created_at).toLocaleTimeString()}</TableCell>
+                      <TableCell>{sale.customer_name || 'Walk-in'}</TableCell>
+                      <TableCell>{Array.isArray(sale.items) ? sale.items.length : 0} items</TableCell>
+                      <TableCell>UGX {Number(sale.total).toLocaleString()}</TableCell>
+                      <TableCell>{sale.payment_method}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={sale.status === 'approved' ? 'default' : 
+                                   sale.status === 'pending' ? 'secondary' : 'destructive'}
+                        >
+                          {sale.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
