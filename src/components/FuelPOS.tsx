@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, TrendingUp, Database } from "lucide-react";
+import { Fuel, TrendingUp, Database, Receipt } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { useSales, type SaleItem } from '@/hooks/useSales';
+import { ReceiptGenerator } from './ReceiptGenerator';
 
 interface FuelPOSProps {
   onSaleRecord: (sale: any) => void;
@@ -41,6 +42,8 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const [customerName, setCustomerName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [pumpNumber, setPumpNumber] = useState('');
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [lastSaleData, setLastSaleData] = useState<any>(null);
 
   const { createSale, isCreatingSale, sales, getSalesSummary } = useSales();
 
@@ -81,6 +84,25 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
     const tax = subtotal * 0.18;
     const total = subtotal + tax;
 
+    // Prepare receipt data
+    const receiptData = {
+      department: 'fuel',
+      customerName: customerName || 'Walk-in Customer',
+      items: [{
+        name: selectedFuelData?.name || '',
+        quantity: quantityNum,
+        price: selectedFuelData?.price || 0,
+        total: totalAmount
+      }],
+      subtotal,
+      tax,
+      total,
+      paymentMethod,
+      pumpNumber,
+      amountReceived: total, // For fuel, typically exact amount
+      changeAmount: 0
+    };
+
     // Save to database using the sales hook
     const saleData = {
       department: 'fuel' as const,
@@ -97,6 +119,8 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
       tax,
       total,
       payment_method: paymentMethod,
+      amount_received: total,
+      change_amount: 0,
     };
 
     createSale(saleData);
@@ -120,6 +144,10 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
     };
 
     onSaleRecord(globalSale);
+
+    // Store receipt data and show receipt
+    setLastSaleData(receiptData);
+    setShowReceipt(true);
     
     // Reset form
     setSelectedFuel('');
@@ -133,6 +161,20 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
       description: `Fuel sale of UGX ${total.toLocaleString()} recorded successfully`,
     });
   };
+
+  const handleReceiptClose = () => {
+    setShowReceipt(false);
+    setLastSaleData(null);
+  };
+
+  if (showReceipt && lastSaleData) {
+    return (
+      <ReceiptGenerator
+        saleData={lastSaleData}
+        onClose={handleReceiptClose}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -222,7 +264,8 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
             className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
             disabled={isCreatingSale}
           >
-            {isCreatingSale ? 'Processing...' : 'Record Sale & Save to Database'}
+            <Receipt className="h-4 w-4 mr-2" />
+            {isCreatingSale ? 'Processing...' : 'Record Sale & Generate Receipt'}
           </Button>
         </CardContent>
       </Card>
