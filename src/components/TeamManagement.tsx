@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Users, Mail, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { UserPlus, Users, Mail, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
@@ -35,29 +35,43 @@ export const TeamManagement: React.FC = () => {
 
   const fetchTeamData = async () => {
     try {
+      console.log('Fetching team data...');
+      
       // Fetch team members
-      const { data: members } = await supabase
+      const { data: members, error: membersError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (members) setTeamMembers(members);
+      if (membersError) {
+        console.error('Error fetching team members:', membersError);
+      } else {
+        console.log('Team members fetched:', members);
+        setTeamMembers(members || []);
+      }
 
       // Fetch pending invitations
-      const { data: pendingInvitations } = await supabase
+      const { data: pendingInvitations, error: invitationsError } = await supabase
         .from('team_invitations')
         .select('*')
         .is('accepted_at', null)
         .order('created_at', { ascending: false });
 
-      if (pendingInvitations) setInvitations(pendingInvitations);
+      if (invitationsError) {
+        console.error('Error fetching invitations:', invitationsError);
+      } else {
+        console.log('Pending invitations fetched:', pendingInvitations);
+        setInvitations(pendingInvitations || []);
+      }
     } catch (error) {
-      console.error('Error fetching team data:', error);
+      console.error('Error in fetchTeamData:', error);
     }
   };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Attempting to send invitation...');
+    
     if (!email || !role || !department) {
       setError('Please fill in all fields');
       return;
@@ -68,34 +82,79 @@ export const TeamManagement: React.FC = () => {
       return;
     }
 
+    // Check if email is already invited or registered
+    const existingInvitation = invitations.find(inv => inv.email.toLowerCase() === email.toLowerCase());
+    const existingMember = teamMembers.find(member => member.email.toLowerCase() === email.toLowerCase());
+    
+    if (existingInvitation) {
+      setError('This email already has a pending invitation');
+      return;
+    }
+    
+    if (existingMember) {
+      setError('This email is already registered as a team member');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      const { error: inviteError } = await supabase
+      console.log('Inserting invitation:', {
+        email: email.toLowerCase().trim(),
+        role,
+        department,
+        invited_by: user.id
+      });
+
+      const { data, error: inviteError } = await supabase
         .from('team_invitations')
         .insert({
-          email,
+          email: email.toLowerCase().trim(),
           role: role as any,
           department: department as any,
           invited_by: user.id
-        });
+        })
+        .select();
 
       if (inviteError) {
-        setError(inviteError.message);
+        console.error('Invitation error:', inviteError);
+        setError(`Failed to send invitation: ${inviteError.message}`);
       } else {
+        console.log('Invitation created successfully:', data);
         setSuccess(`Invitation sent to ${email}. They can now sign up with this email to join your team.`);
         setEmail('');
         setRole('');
         setDepartment('');
-        fetchTeamData();
+        fetchTeamData(); // Refresh the data
       }
     } catch (error: any) {
-      setError(error.message);
+      console.error('Unexpected error:', error);
+      setError(`Unexpected error: ${error.message}`);
     }
 
     setLoading(false);
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('team_invitations')
+        .delete()
+        .eq('id', invitationId);
+
+      if (error) {
+        console.error('Error canceling invitation:', error);
+        setError('Failed to cancel invitation');
+      } else {
+        setSuccess('Invitation canceled successfully');
+        fetchTeamData();
+      }
+    } catch (error) {
+      console.error('Error canceling invitation:', error);
+      setError('Failed to cancel invitation');
+    }
   };
 
   const getRoleDisplayName = (role: string) => {
@@ -129,6 +188,25 @@ export const TeamManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Debug Info */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <AlertCircle className="w-5 h-5" />
+            Debug Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-blue-700 space-y-2">
+            <p><strong>Current User ID:</strong> {user?.id}</p>
+            <p><strong>Current User Email:</strong> {user?.email}</p>
+            <p><strong>Profile Role:</strong> {profile?.role}</p>
+            <p><strong>Total Team Members:</strong> {teamMembers.length}</p>
+            <p><strong>Pending Invitations:</strong> {invitations.length}</p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Invite New Team Member */}
       <Card>
         <CardHeader>
@@ -224,11 +302,25 @@ export const TeamManagement: React.FC = () => {
                       <p className="text-sm text-gray-600">
                         {getRoleDisplayName(invitation.role)} • {invitation.department}
                       </p>
+                      <p className="text-xs text-gray-500">
+                        Invited {new Date(invitation.created_at || '').toLocaleDateString()}
+                        {invitation.expires_at && ` • Expires ${new Date(invitation.expires_at).toLocaleDateString()}`}
+                      </p>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-yellow-800 border-yellow-300">
-                    Pending
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-yellow-800 border-yellow-300">
+                      Pending
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCancelInvitation(invitation.id)}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -255,6 +347,9 @@ export const TeamManagement: React.FC = () => {
                   <div>
                     <p className="font-medium">{member.full_name}</p>
                     <p className="text-sm text-gray-600">{member.email}</p>
+                    <p className="text-xs text-gray-500">
+                      Joined {new Date(member.created_at || '').toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -273,6 +368,19 @@ export const TeamManagement: React.FC = () => {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Instructions */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <h4 className="font-semibold text-blue-800 mb-2">How Invitations Work:</h4>
+          <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+            <li>Send an invitation with the team member's email address</li>
+            <li>The team member visits the app and signs up with the EXACT same email</li>
+            <li>Upon signup, they will automatically be assigned the role you specified</li>
+            <li>If they don't sign up within 7 days, the invitation expires</li>
+          </ol>
         </CardContent>
       </Card>
     </div>
