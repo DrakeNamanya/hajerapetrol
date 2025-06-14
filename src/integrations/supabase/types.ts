@@ -99,6 +99,39 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          department: Database["public"]["Enums"]["department"]
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean | null
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          department: Database["public"]["Enums"]["department"]
+          email: string
+          full_name: string
+          id: string
+          is_active?: boolean | null
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          department?: Database["public"]["Enums"]["department"]
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
+      }
       receipts: {
         Row: {
           amount_received: number | null
@@ -153,15 +186,64 @@ export type Database = {
         }
         Relationships: []
       }
+      team_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string | null
+          department: Database["public"]["Enums"]["department"]
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string | null
+          department: Database["public"]["Enums"]["department"]
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string | null
+          department?: Database["public"]["Enums"]["department"]
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      department:
+        | "executive"
+        | "management"
+        | "accounting"
+        | "fuel"
+        | "supermarket"
+        | "restaurant"
+      user_role:
+        | "director"
+        | "manager"
+        | "accountant"
+        | "fuel_cashier"
+        | "supermarket_cashier"
+        | "restaurant_cashier"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -276,6 +358,23 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      department: [
+        "executive",
+        "management",
+        "accounting",
+        "fuel",
+        "supermarket",
+        "restaurant",
+      ],
+      user_role: [
+        "director",
+        "manager",
+        "accountant",
+        "fuel_cashier",
+        "supermarket_cashier",
+        "restaurant_cashier",
+      ],
+    },
   },
 } as const

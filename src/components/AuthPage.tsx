@@ -1,0 +1,218 @@
+
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Fuel, Building2, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+
+export const AuthPage: React.FC = () => {
+  const { signUp, signIn } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || !fullName) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    const { error } = await signUp(email, password, fullName);
+    
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage('Please check your email for verification link');
+    }
+    
+    setLoading(false);
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      setError(error.message);
+    }
+    
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-300/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl relative z-10">
+        <CardHeader className="text-center pb-6">
+          {/* Petrol Station Logo and Name */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="relative mb-4">
+              <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center shadow-xl">
+                <Fuel className="w-10 h-10 text-white" />
+              </div>
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                <Building2 className="w-4 h-4 text-white" />
+              </div>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">HIPEMART OILS</h1>
+            <p className="text-lg text-orange-600 font-semibold">BUKHALIHA ROAD, BUSIA</p>
+          </div>
+          
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+            Multi-Department POS System
+          </CardTitle>
+          <p className="text-gray-600 mt-2">Fuel • Supermarket • Restaurant</p>
+        </CardHeader>
+        
+        <CardContent>
+          <Tabs defaultValue="signin" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="signin" className="space-y-4 mt-6">
+              <form onSubmit={handleSignIn} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signin-email">Email</Label>
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="border-2 border-orange-200 focus:border-orange-500"
+                    disabled={loading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signin-password">Password</Label>
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="border-2 border-orange-200 focus:border-orange-500"
+                    disabled={loading}
+                  />
+                </div>
+
+                <Button 
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg"
+                  disabled={loading}
+                >
+                  {loading ? 'Signing In...' : 'Sign In'}
+                </Button>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="signup" className="space-y-4 mt-6">
+              <form onSubmit={handleSignUp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Input
+                    id="signup-name"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                    className="border-2 border-orange-200 focus:border-orange-500"
+                    disabled={loading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="border-2 border-orange-200 focus:border-orange-500"
+                    disabled={loading}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-password">Password</Label>
+                  <Input
+                    id="signup-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a password"
+                    className="border-2 border-orange-200 focus:border-orange-500"
+                    disabled={loading}
+                  />
+                </div>
+
+                <Button 
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating Account...' : 'Sign Up'}
+                </Button>
+              </form>
+              
+              <div className="text-xs text-gray-500 mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail className="w-4 h-4" />
+                  <span>The first user becomes the Director automatically</span>
+                </div>
+                <p>After signing up, you can invite your team members</p>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {error && (
+            <Alert className="border-red-200 bg-red-50 mt-4">
+              <AlertDescription className="text-red-600">{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          {message && (
+            <Alert className="border-green-200 bg-green-50 mt-4">
+              <AlertDescription className="text-green-600">{message}</AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+        
+        {/* Powered by footer */}
+        <div className="absolute bottom-4 right-4 text-xs text-gray-400">
+          Powered by <span className="font-semibold text-orange-600">DATACOLLECTORS LTD</span><br />
+          <span className="text-gray-500">0701634653</span>
+        </div>
+      </Card>
+    </div>
+  );
+};

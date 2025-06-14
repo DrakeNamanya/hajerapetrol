@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { LoginForm } from '@/components/LoginForm';
+import { AuthPage } from '@/components/AuthPage';
+import { TeamManagement } from '@/components/TeamManagement';
 import { FuelPOS } from '@/components/FuelPOS';
 import { SupermarketPOS } from '@/components/SupermarketPOS';
 import { RestaurantPOS } from '@/components/RestaurantPOS';
@@ -10,15 +11,9 @@ import { DirectorDashboard } from '@/components/DirectorDashboard';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Fuel, Building2 } from 'lucide-react';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'director' | 'manager' | 'accountant' | 'fuel_cashier' | 'supermarket_cashier' | 'restaurant_cashier';
-  department: 'executive' | 'management' | 'accounting' | 'fuel' | 'supermarket' | 'restaurant';
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Fuel, Building2, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Sale {
   id: number;
@@ -34,16 +29,8 @@ interface Sale {
 }
 
 const Index = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user, profile, loading, signOut } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
-
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-  };
 
   const handleSaleRecord = (sale: Sale) => {
     setSales(prevSales => [...prevSales, sale]);
@@ -69,8 +56,21 @@ const Index = () => {
     );
   };
 
-  if (!currentUser) {
-    return <LoginForm onLogin={handleLogin} />;
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth page if not logged in
+  if (!user || !profile) {
+    return <AuthPage />;
   }
 
   const getRoleDisplayName = (role: string) => {
@@ -98,7 +98,7 @@ const Index = () => {
       </div>
 
       {/* Header */}
-      <div className={`bg-gradient-to-r ${getDepartmentColor(currentUser.department)} text-white shadow-xl relative z-10`}>
+      <div className={`bg-gradient-to-r ${getDepartmentColor(profile.department)} text-white shadow-xl relative z-10`}>
         <div className="container mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -114,17 +114,17 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="font-semibold">{currentUser.name}</p>
-                <p className="text-sm opacity-90">{getRoleDisplayName(currentUser.role)}</p>
+                <p className="font-semibold">{profile.full_name}</p>
+                <p className="text-sm opacity-90">{getRoleDisplayName(profile.role)}</p>
               </div>
               <Avatar>
                 <AvatarFallback className="bg-white/20 text-white">
-                  {currentUser.name.split(' ').map(n => n[0]).join('')}
+                  {profile.full_name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <Button 
                 variant="outline" 
-                onClick={handleLogout}
+                onClick={signOut}
                 className="bg-white/20 border-white/30 text-white hover:bg-white/30"
               >
                 Logout
@@ -137,7 +137,7 @@ const Index = () => {
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8 relative z-10">
         {/* Dashboard for Director */}
-        {currentUser.role === 'director' && (
+        {profile.role === 'director' && (
           <div>
             <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
@@ -145,12 +145,26 @@ const Index = () => {
                 <p className="text-gray-600">Strategic overview of all business operations</p>
               </CardHeader>
             </Card>
-            <DirectorDashboard sales={sales} />
+            
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="overview">Business Overview</TabsTrigger>
+                <TabsTrigger value="team">Team Management</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview">
+                <DirectorDashboard sales={sales} />
+              </TabsContent>
+              
+              <TabsContent value="team">
+                <TeamManagement />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
 
         {/* Dashboard for Manager */}
-        {currentUser.role === 'manager' && (
+        {profile.role === 'manager' && (
           <div>
             <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
@@ -166,7 +180,7 @@ const Index = () => {
         )}
 
         {/* Dashboard for Accountant */}
-        {currentUser.role === 'accountant' && (
+        {profile.role === 'accountant' && (
           <div>
             <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
@@ -182,7 +196,7 @@ const Index = () => {
         )}
 
         {/* Fuel Station POS */}
-        {currentUser.role === 'fuel_cashier' && (
+        {profile.role === 'fuel_cashier' && (
           <div>
             <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
@@ -198,7 +212,7 @@ const Index = () => {
         )}
 
         {/* Supermarket POS */}
-        {currentUser.role === 'supermarket_cashier' && (
+        {profile.role === 'supermarket_cashier' && (
           <div>
             <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
@@ -214,7 +228,7 @@ const Index = () => {
         )}
 
         {/* Restaurant POS */}
-        {currentUser.role === 'restaurant_cashier' && (
+        {profile.role === 'restaurant_cashier' && (
           <div>
             <Card className="mb-6 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
