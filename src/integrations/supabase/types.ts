@@ -99,6 +99,119 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          barcode: string | null
+          category: string
+          cost_price: number
+          created_at: string
+          created_by: string | null
+          current_stock: number
+          department: string
+          description: string | null
+          expiry_date: string | null
+          id: string
+          is_active: boolean
+          maximum_stock: number
+          minimum_stock: number
+          name: string
+          sku: string | null
+          supplier_contact: string | null
+          supplier_name: string | null
+          unit_of_measure: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category: string
+          cost_price?: number
+          created_at?: string
+          created_by?: string | null
+          current_stock?: number
+          department: string
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          maximum_stock?: number
+          minimum_stock?: number
+          name: string
+          sku?: string | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          unit_of_measure?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category?: string
+          cost_price?: number
+          created_at?: string
+          created_by?: string | null
+          current_stock?: number
+          department?: string
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          maximum_stock?: number
+          minimum_stock?: number
+          name?: string
+          sku?: string | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          unit_of_measure?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      low_stock_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_level: string
+          created_at: string
+          current_stock: number
+          id: string
+          is_acknowledged: boolean
+          item_id: string
+          minimum_stock: number
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_level?: string
+          created_at?: string
+          current_stock: number
+          id?: string
+          is_acknowledged?: boolean
+          item_id: string
+          minimum_stock: number
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_level?: string
+          created_at?: string
+          current_stock?: number
+          id?: string
+          is_acknowledged?: boolean
+          item_id?: string
+          minimum_stock?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "low_stock_alerts_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -129,6 +242,105 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
+      }
+      purchase_order_items: {
+        Row: {
+          id: string
+          item_id: string
+          notes: string | null
+          purchase_order_id: string
+          quantity_ordered: number
+          quantity_received: number
+          total_cost: number
+          unit_cost: number
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          notes?: string | null
+          purchase_order_id: string
+          quantity_ordered: number
+          quantity_received?: number
+          total_cost: number
+          unit_cost: number
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          notes?: string | null
+          purchase_order_id?: string
+          quantity_ordered?: number
+          quantity_received?: number
+          total_cost?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          expected_delivery_date: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          order_number: string
+          status: string
+          supplier_contact: string | null
+          supplier_name: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number: string
+          status?: string
+          supplier_contact?: string | null
+          supplier_name: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_delivery_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number?: string
+          status?: string
+          supplier_contact?: string | null
+          supplier_name?: string
+          total_amount?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -257,6 +469,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_by: string | null
+          department: string
+          id: string
+          item_id: string
+          movement_date: string
+          movement_type: string
+          new_stock: number
+          notes: string | null
+          previous_stock: number
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          total_value: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          created_by?: string | null
+          department: string
+          id?: string
+          item_id: string
+          movement_date?: string
+          movement_type: string
+          new_stock: number
+          notes?: string | null
+          previous_stock: number
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          total_value?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          created_by?: string | null
+          department?: string
+          id?: string
+          item_id?: string
+          movement_date?: string
+          movement_type?: string
+          new_stock?: number
+          notes?: string | null
+          previous_stock?: number
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          total_value?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_invitations: {
         Row: {

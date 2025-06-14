@@ -14,7 +14,8 @@ import { ManagerApprovalDashboard } from '@/components/ManagerApprovalDashboard'
 import { DirectorDashboard } from '@/components/DirectorDashboard';
 import { TeamManagement } from '@/components/TeamManagement';
 import { SalesAnalytics } from '@/components/SalesAnalytics';
-import { Fuel, ShoppingCart, UtensilsCrossed, Calculator, Users, Building, CheckCircle, LogOut, BarChart3 } from 'lucide-react';
+import { InventoryManagement } from '@/components/InventoryManagement';
+import { Fuel, ShoppingCart, UtensilsCrossed, Calculator, Users, Building, CheckCircle, LogOut, BarChart3, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { RealtimeNotifications } from '@/components/RealtimeNotifications';
@@ -91,11 +92,15 @@ const Index = () => {
     if (profile.role === 'director') {
       return (
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Director Overview</TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="inventory">
+              <Package className="w-4 h-4 mr-2" />
+              Inventory
             </TabsTrigger>
             <TabsTrigger value="team">Team Management</TabsTrigger>
             <TabsTrigger value="approvals">Sales Approvals</TabsTrigger>
@@ -105,6 +110,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="analytics">
             <SalesAnalytics />
+          </TabsContent>
+          <TabsContent value="inventory">
+            <InventoryManagement />
           </TabsContent>
           <TabsContent value="team">
             <TeamManagement />
@@ -119,11 +127,15 @@ const Index = () => {
     if (profile.role === 'manager') {
       return (
         <Tabs defaultValue="management" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="management">Management</TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="inventory">
+              <Package className="w-4 h-4 mr-2" />
+              Inventory
             </TabsTrigger>
             <TabsTrigger value="approvals">Sales Approvals</TabsTrigger>
             <TabsTrigger value="team">Team</TabsTrigger>
@@ -133,6 +145,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="analytics">
             <SalesAnalytics />
+          </TabsContent>
+          <TabsContent value="inventory">
+            <InventoryManagement />
           </TabsContent>
           <TabsContent value="approvals">
             <ManagerApprovalDashboard />
@@ -147,11 +162,15 @@ const Index = () => {
     if (profile.role === 'accountant') {
       return (
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="inventory">
+              <Package className="w-4 h-4 mr-2" />
+              Inventory
             </TabsTrigger>
           </TabsList>
           <TabsContent value="dashboard">
@@ -159,6 +178,9 @@ const Index = () => {
           </TabsContent>
           <TabsContent value="analytics">
             <SalesAnalytics />
+          </TabsContent>
+          <TabsContent value="inventory">
+            <InventoryManagement />
           </TabsContent>
         </Tabs>
       );
