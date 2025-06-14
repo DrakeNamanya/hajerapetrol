@@ -46,11 +46,11 @@ interface Sale {
 }
 
 const initialProducts: Product[] = [
-  { id: '1', name: 'Rice 5kg', barcode: '123456789012', price: 25000, category: 'Grains', stock: 50, lowStockAlert: 10, expiryDate: '2024-12-31', salesCount: 15 },
-  { id: '2', name: 'Cooking Oil 1L', barcode: '123456789013', price: 8000, category: 'Oil', stock: 30, lowStockAlert: 5, expiryDate: '2024-10-15', salesCount: 22 },
-  { id: '3', name: 'Sugar 1kg', barcode: '123456789014', price: 4500, category: 'Sweeteners', stock: 25, lowStockAlert: 8, expiryDate: '2025-03-20', salesCount: 8 },
-  { id: '4', name: 'Bread', barcode: '123456789015', price: 2500, category: 'Bakery', stock: 20, lowStockAlert: 5, expiryDate: '2024-06-10', salesCount: 30 },
-  { id: '5', name: 'Milk 1L', barcode: '123456789016', price: 3500, category: 'Dairy', stock: 15, lowStockAlert: 5, expiryDate: '2024-06-15', salesCount: 18 },
+  { id: '1', name: 'Rice 5kg', barcode: '123456789012', price: 25000, category: 'Grains', stock: 50, lowStockAlert: 20, expiryDate: '2024-12-31', salesCount: 15 },
+  { id: '2', name: 'Cooking Oil 1L', barcode: '123456789013', price: 8000, category: 'Oil', stock: 30, lowStockAlert: 20, expiryDate: '2024-10-15', salesCount: 22 },
+  { id: '3', name: 'Sugar 1kg', barcode: '123456789014', price: 4500, category: 'Sweeteners', stock: 25, lowStockAlert: 20, expiryDate: '2025-03-20', salesCount: 8 },
+  { id: '4', name: 'Bread', barcode: '123456789015', price: 2500, category: 'Bakery', stock: 15, lowStockAlert: 20, expiryDate: '2024-06-10', salesCount: 30 },
+  { id: '5', name: 'Milk 1L', barcode: '123456789016', price: 3500, category: 'Dairy', stock: 10, lowStockAlert: 20, expiryDate: '2024-06-15', salesCount: 18 },
 ];
 
 interface SupermarketPOSProps {
@@ -59,7 +59,6 @@ interface SupermarketPOSProps {
 
 export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) => {
   const [products, setProducts] = useState<Product[]>(initialProducts);
-
   const [cart, setCart] = useState<CartItem[]>([]);
   const [productSearch, setProductSearch] = useState('');
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -69,6 +68,16 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState<any>(null);
+  
+  // Stock management form state
+  const [stockForm, setStockForm] = useState({
+    productName: '',
+    quantity: '',
+    price: '',
+    category: '',
+    barcode: '',
+    expiryDate: ''
+  });
   
   const { businessSettings, generateReceiptNumber, saveReceipt } = useReceipts();
 
@@ -149,7 +158,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
           description: `${product.name} added to cart`,
         });
       } else {
-        // Adding to inventory
         setProducts(prev => prev.map(p => 
           p.id === product.id 
             ? { ...p, stock: p.stock + 1 }
@@ -168,6 +176,60 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
         variant: "destructive",
       });
     }
+  };
+
+  const handleStockFormSubmit = () => {
+    if (!stockForm.productName || !stockForm.quantity || !stockForm.price || !stockForm.category || !stockForm.barcode) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const existingProduct = products.find(p => p.barcode === stockForm.barcode);
+    
+    if (existingProduct) {
+      // Update existing product stock
+      setProducts(prev => prev.map(p => 
+        p.barcode === stockForm.barcode 
+          ? { ...p, stock: p.stock + parseInt(stockForm.quantity), expiryDate: stockForm.expiryDate || p.expiryDate }
+          : p
+      ));
+      toast({
+        title: "Stock Updated",
+        description: `${existingProduct.name} stock increased by ${stockForm.quantity}`,
+      });
+    } else {
+      // Add new product
+      const newProduct: Product = {
+        id: Date.now().toString(),
+        name: stockForm.productName,
+        barcode: stockForm.barcode,
+        price: parseFloat(stockForm.price),
+        category: stockForm.category,
+        stock: parseInt(stockForm.quantity),
+        lowStockAlert: 20,
+        expiryDate: stockForm.expiryDate,
+        salesCount: 0
+      };
+      setProducts(prev => [...prev, newProduct]);
+      toast({
+        title: "Product Added",
+        description: `${stockForm.productName} added to inventory`,
+      });
+    }
+
+    // Reset form
+    setStockForm({
+      productName: '',
+      quantity: '',
+      price: '',
+      category: '',
+      barcode: '',
+      expiryDate: ''
+    });
   };
 
   const handleSale = async () => {
@@ -190,12 +252,11 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     }
 
     const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
-    const tax = subtotal * 0.18; // 18% VAT
+    const tax = subtotal * 0.18;
     const total = subtotal + tax;
     
     const receiptNumber = generateReceiptNumber('supermarket');
     
-    // Create receipt data
     const receiptData = {
       receiptNumber,
       department: 'supermarket',
@@ -213,7 +274,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       timestamp: new Date()
     };
 
-    // Save receipt to database
     const receiptSaved = await saveReceipt(receiptData);
     
     if (receiptSaved) {
@@ -229,7 +289,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       timestamp: new Date()
     };
 
-    // Update product stock and sales count
     setProducts(prev => prev.map(product => {
       const cartItem = cart.find(item => item.id === product.id);
       if (cartItem) {
@@ -242,10 +301,8 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       return product;
     }));
 
-    // Add to daily sales
     setDailySales(prev => [...prev, sale]);
 
-    // Record the sale with the correct format for the global system
     const globalSale = {
       id: sale.id,
       department: 'supermarket',
@@ -265,7 +322,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
 
     onSaleRecord(globalSale);
 
-    // Clear cart and payment method
     setCart([]);
     setPaymentMethod('');
 
@@ -302,8 +358,8 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
   const dailyTotal = dailySales.reduce((sum, sale) => sum + sale.total, 0);
 
-  // Reports data
-  const lowStockProducts = products.filter(p => p.stock <= p.lowStockAlert);
+  // Reports data with updated logic
+  const lowStockProducts = products.filter(p => p.stock < 20);
   const mostSellingProducts = [...products].sort((a, b) => b.salesCount - a.salesCount).slice(0, 5);
   const worstSellingProducts = [...products].sort((a, b) => a.salesCount - b.salesCount).slice(0, 5);
   const expiringProducts = products.filter(p => {
@@ -313,6 +369,17 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0;
   });
+
+  // Weekly sales data for chart
+  const weeklyData = [
+    { day: 'Mon', amount: 450000 },
+    { day: 'Tue', amount: 520000 },
+    { day: 'Wed', amount: 380000 },
+    { day: 'Thu', amount: 620000 },
+    { day: 'Fri', amount: 780000 },
+    { day: 'Sat', amount: 890000 },
+    { day: 'Sun', amount: 420000 }
+  ];
 
   return (
     <div className="space-y-6">
@@ -324,6 +391,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
         </TabsList>
 
         <TabsContent value="sales" className="space-y-4">
+          
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-green-800">
@@ -521,59 +589,113 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Inventory Management
+                Add New Stock
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Product Name</Label>
+                  <Input
+                    value={stockForm.productName}
+                    onChange={(e) => setStockForm(prev => ({ ...prev, productName: e.target.value }))}
+                    placeholder="Enter product name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Quantity</Label>
+                  <Input
+                    type="number"
+                    value={stockForm.quantity}
+                    onChange={(e) => setStockForm(prev => ({ ...prev, quantity: e.target.value }))}
+                    placeholder="Enter quantity"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Price (UGX)</Label>
+                  <Input
+                    type="number"
+                    value={stockForm.price}
+                    onChange={(e) => setStockForm(prev => ({ ...prev, price: e.target.value }))}
+                    placeholder="Enter price"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={stockForm.category} onValueChange={(value) => setStockForm(prev => ({ ...prev, category: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border shadow-lg">
+                      <SelectItem value="Grains">Grains</SelectItem>
+                      <SelectItem value="Oil">Oil</SelectItem>
+                      <SelectItem value="Sweeteners">Sweeteners</SelectItem>
+                      <SelectItem value="Bakery">Bakery</SelectItem>
+                      <SelectItem value="Dairy">Dairy</SelectItem>
+                      <SelectItem value="Beverages">Beverages</SelectItem>
+                      <SelectItem value="Household">Household</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Expiry Date</Label>
+                  <Input
+                    type="date"
+                    value={stockForm.expiryDate}
+                    onChange={(e) => setStockForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Barcode</Label>
+                  <Input
+                    value={stockForm.barcode}
+                    onChange={(e) => setStockForm(prev => ({ ...prev, barcode: e.target.value }))}
+                    placeholder="Scan or enter barcode"
+                  />
+                </div>
+              </div>
+              <Button onClick={handleStockFormSubmit} className="w-full">
+                Add to Inventory
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Current Inventory
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Add Stock by Barcode</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={barcodeInput}
-                      onChange={(e) => setBarcodeInput(e.target.value)}
-                      placeholder="Scan barcode to add stock"
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          handleBarcodeInput(barcodeInput, false);
-                        }
-                      }}
-                    />
-                    <Button onClick={() => handleBarcodeInput(barcodeInput, false)}>
-                      Add Stock
-                    </Button>
-                  </div>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Barcode</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Barcode</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {products.map(product => (
+                    <TableRow key={product.id}>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.barcode}</TableCell>
+                      <TableCell>{product.stock}</TableCell>
+                      <TableCell>UGX {product.price.toLocaleString()}</TableCell>
+                      <TableCell>
+                        {product.stock < 20 ? (
+                          <Badge variant="destructive">Low Stock</Badge>
+                        ) : (
+                          <Badge variant="default">In Stock</Badge>
+                        )}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map(product => (
-                      <TableRow key={product.id}>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell>{product.barcode}</TableCell>
-                        <TableCell>{product.stock}</TableCell>
-                        <TableCell>UGX {product.price.toLocaleString()}</TableCell>
-                        <TableCell>
-                          {product.stock <= product.lowStockAlert ? (
-                            <Badge variant="destructive">Low Stock</Badge>
-                          ) : (
-                            <Badge variant="default">In Stock</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -584,7 +706,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-red-600">
                   <AlertTriangle className="h-5 w-5" />
-                  Low Stock Alert
+                  Low Stock Alert (Less than 20)
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -673,13 +795,25 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">Weekly sales chart would be displayed here with daily breakdown</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-7 gap-2 text-center">
+                  {weeklyData.map((day, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="font-medium text-sm">{day.day}</div>
+                      <div className="bg-blue-100 rounded p-2">
+                        <div className="text-xs text-blue-600 font-semibold">
+                          UGX {day.amount.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Receipt Dialog */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
         <DialogContent className="max-w-md">
           <DialogHeader>

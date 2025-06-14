@@ -2,9 +2,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
@@ -37,24 +34,30 @@ interface Expense {
 interface AccountantDashboardProps {
   sales: Sale[];
   onApprove: (saleId: number) => void;
+  expenses?: Expense[];
 }
 
-const salesChartData = [
-  { department: 'Supermarket', amount: 5500000 },
-  { department: 'Restaurant', amount: 3200000 },
-  { department: 'Fuel', amount: 8900000 },
-];
+// Department sales data using actual sales data
+const getDepartmentSalesData = (sales: Sale[]) => {
+  const departmentTotals = sales.reduce((acc, sale) => {
+    if (sale.status === 'approved' || sale.status === 'accountant_approved') {
+      acc[sale.department] = (acc[sale.department] || 0) + sale.total;
+    }
+    return acc;
+  }, {} as Record<string, number>);
 
-export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ sales, onApprove }) => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [newExpense, setNewExpense] = useState({
-    type: '',
-    description: '',
-    amount: '',
-    department: ''
-  });
-  const [chartFilter, setChartFilter] = useState('week');
+  return [
+    { department: 'Supermarket', amount: departmentTotals.supermarket || 0 },
+    { department: 'Restaurant', amount: departmentTotals.restaurant || 0 },
+    { department: 'Fuel', amount: departmentTotals.fuel || 0 },
+  ];
+};
 
+export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ 
+  sales, 
+  onApprove, 
+  expenses = [] 
+}) => {
   const pendingSales = sales.filter(sale => sale.status === 'pending');
   const approvedSales = sales.filter(sale => sale.status === 'accountant_approved' || sale.status === 'approved');
   const pendingExpenses = expenses.filter(expense => expense.status === 'pending');
@@ -76,42 +79,14 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ sales,
     });
   };
 
-  const handleExpenseSubmit = () => {
-    if (!newExpense.type || !newExpense.description || !newExpense.amount || !newExpense.department) {
-      toast({
-        title: "Error",
-        description: "Please fill in all expense fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const expense: Expense = {
-      id: Date.now(),
-      type: newExpense.type,
-      description: newExpense.description,
-      amount: parseFloat(newExpense.amount),
-      department: newExpense.department,
-      timestamp: new Date(),
-      status: 'pending'
-    };
-
-    setExpenses(prev => [...prev, expense]);
-    setNewExpense({ type: '', description: '', amount: '', department: '' });
-
-    toast({
-      title: "Expense Recorded",
-      description: "Expense has been submitted to manager for approval",
-    });
-  };
+  const salesChartData = getDepartmentSalesData(sales);
 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="sales">Sales Approval</TabsTrigger>
           <TabsTrigger value="reports">Sales Reports</TabsTrigger>
-          <TabsTrigger value="expenses">Expense Management</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="space-y-6">
@@ -235,24 +210,44 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ sales,
               </div>
             </CardContent>
           </Card>
+
+          {pendingExpenses.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Expenses from Manager ({pendingExpenses.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {pendingExpenses.map(expense => (
+                    <div key={expense.id} className="border rounded-lg p-4 bg-yellow-50">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className={getDepartmentColor(expense.department)}>
+                              {expense.department.toUpperCase()}
+                            </Badge>
+                            <Badge variant="secondary">{expense.type}</Badge>
+                          </div>
+                          <p className="font-medium">{expense.description}</p>
+                          <p className="text-sm text-gray-600">{expense.timestamp.toLocaleString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-red-600">UGX {expense.amount.toLocaleString()}</p>
+                          <Badge variant="secondary">Awaiting Approval</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Department Sales Overview</CardTitle>
-              <div className="flex gap-2">
-                <Select value={chartFilter} onValueChange={setChartFilter}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="day">Day</SelectItem>
-                    <SelectItem value="week">Week</SelectItem>
-                    <SelectItem value="month">Month</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </CardHeader>
             <CardContent>
               <ChartContainer
@@ -274,107 +269,6 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({ sales,
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="expenses" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Record New Expense</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Expense Type</Label>
-                  <Select value={newExpense.type} onValueChange={(value) => setNewExpense(prev => ({ ...prev, type: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select expense type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="inventory">Inventory Purchase</SelectItem>
-                      <SelectItem value="salary">Salary</SelectItem>
-                      <SelectItem value="operating">Operating Expense</SelectItem>
-                      <SelectItem value="maintenance">Maintenance</SelectItem>
-                      <SelectItem value="utilities">Utilities</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  <Select value={newExpense.department} onValueChange={(value) => setNewExpense(prev => ({ ...prev, department: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fuel">Fuel Station</SelectItem>
-                      <SelectItem value="supermarket">Supermarket</SelectItem>
-                      <SelectItem value="restaurant">Restaurant</SelectItem>
-                      <SelectItem value="general">General</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Amount (UGX)</Label>
-                  <Input
-                    type="number"
-                    value={newExpense.amount}
-                    onChange={(e) => setNewExpense(prev => ({ ...prev, amount: e.target.value }))}
-                    placeholder="Enter amount"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Input
-                    value={newExpense.description}
-                    onChange={(e) => setNewExpense(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Enter description"
-                  />
-                </div>
-              </div>
-
-              <Button onClick={handleExpenseSubmit} className="w-full">
-                Submit Expense for Approval
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Expenses ({pendingExpenses.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {pendingExpenses.map(expense => (
-                  <div key={expense.id} className="border rounded-lg p-4 bg-yellow-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getDepartmentColor(expense.department)}>
-                            {expense.department.toUpperCase()}
-                          </Badge>
-                          <Badge variant="secondary">{expense.type}</Badge>
-                        </div>
-                        <p className="font-medium">{expense.description}</p>
-                        <p className="text-sm text-gray-600">{expense.timestamp.toLocaleString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold text-red-600">UGX {expense.amount.toLocaleString()}</p>
-                        <Badge variant="secondary">Awaiting Manager Approval</Badge>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {pendingExpenses.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    No pending expenses
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
