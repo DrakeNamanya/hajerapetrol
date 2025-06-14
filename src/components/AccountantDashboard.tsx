@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { ExpenseTracker } from './ExpenseTracker';
 
 interface Sale {
   id: number;
@@ -37,12 +39,29 @@ interface AccountantDashboardProps {
   expenses?: Expense[];
 }
 
-// Department sales data using actual sales data
-const getDepartmentSalesData = (sales: Sale[]) => {
-  const departmentTotals = sales.reduce((acc, sale) => {
-    if (sale.status === 'approved' || sale.status === 'accountant_approved') {
-      acc[sale.department] = (acc[sale.department] || 0) + sale.total;
-    }
+// Department sales data using actual sales data with different time periods
+const getDepartmentSalesData = (sales: Sale[], period: string) => {
+  const now = new Date();
+  let filteredSales = sales.filter(sale => sale.status === 'approved' || sale.status === 'accountant_approved');
+  
+  // Filter sales based on selected period
+  if (period === 'day') {
+    filteredSales = filteredSales.filter(sale => 
+      sale.timestamp.toDateString() === now.toDateString()
+    );
+  } else if (period === 'week') {
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    filteredSales = filteredSales.filter(sale => sale.timestamp >= weekAgo);
+  } else if (period === 'month') {
+    const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    filteredSales = filteredSales.filter(sale => sale.timestamp >= monthAgo);
+  } else if (period === 'year') {
+    const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    filteredSales = filteredSales.filter(sale => sale.timestamp >= yearAgo);
+  }
+
+  const departmentTotals = filteredSales.reduce((acc, sale) => {
+    acc[sale.department] = (acc[sale.department] || 0) + sale.total;
     return acc;
   }, {} as Record<string, number>);
 
@@ -58,6 +77,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
   onApprove, 
   expenses = [] 
 }) => {
+  const [chartPeriod, setChartPeriod] = useState('week');
   const pendingSales = sales.filter(sale => sale.status === 'pending');
   const approvedSales = sales.filter(sale => sale.status === 'accountant_approved' || sale.status === 'approved');
   const pendingExpenses = expenses.filter(expense => expense.status === 'pending');
@@ -79,13 +99,14 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
     });
   };
 
-  const salesChartData = getDepartmentSalesData(sales);
+  const salesChartData = getDepartmentSalesData(sales, chartPeriod);
 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="sales">Sales Approval</TabsTrigger>
+          <TabsTrigger value="expenses">Expense Records</TabsTrigger>
           <TabsTrigger value="reports">Sales Reports</TabsTrigger>
         </TabsList>
 
@@ -244,10 +265,27 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           )}
         </TabsContent>
 
+        <TabsContent value="expenses" className="space-y-6">
+          <ExpenseTracker userRole="accountant" />
+        </TabsContent>
+
         <TabsContent value="reports" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Department Sales Overview</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                Department Sales Overview
+                <Select value={chartPeriod} onValueChange={setChartPeriod}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ChartContainer
