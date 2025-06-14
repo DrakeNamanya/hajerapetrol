@@ -18,44 +18,53 @@ export const useReportExport = () => {
     setIsExporting(true);
     try {
       const doc = new jsPDF();
+      let currentY = 20;
       
       // Header
       doc.setFontSize(20);
-      doc.text(data.title, 20, 20);
+      doc.text(data.title, 20, currentY);
+      currentY += 10;
+      
       doc.setFontSize(12);
-      doc.text(`Period: ${data.dateRange}`, 20, 30);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 40);
+      doc.text(`Period: ${data.dateRange}`, 20, currentY);
+      currentY += 10;
+      
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, currentY);
+      currentY += 30;
 
       // Summary section
       doc.setFontSize(16);
-      doc.text('Summary', 20, 60);
+      doc.text('Summary', 20, currentY);
+      currentY += 10;
       
       const summaryData = [
-        ['Total Sales', data.summary.totalSales.toString()],
-        ['Total Revenue', `UGX ${data.summary.totalRevenue.toLocaleString()}`],
-        ['Approved Sales', data.summary.approvedSales.toString()],
-        ['Approved Revenue', `UGX ${data.summary.approvedRevenue.toLocaleString()}`],
-        ['Approval Rate', `${data.summary.approvalRate.toFixed(1)}%`]
+        ['Total Sales', data.summary.totalSales?.toString() || '0'],
+        ['Total Revenue', `UGX ${data.summary.totalRevenue?.toLocaleString() || '0'}`],
+        ['Approved Sales', data.summary.approvedSales?.toString() || '0'],
+        ['Approved Revenue', `UGX ${data.summary.approvedRevenue?.toLocaleString() || '0'}`],
+        ['Approval Rate', `${data.summary.approvalRate?.toFixed(1) || '0'}%`]
       ];
 
       doc.autoTable({
-        startY: 70,
+        startY: currentY,
         head: [['Metric', 'Value']],
         body: summaryData,
         theme: 'grid'
       });
 
+      currentY = (doc as any).lastAutoTable?.finalY + 20 || currentY + 80;
+
       // Department breakdown
       if (data.departmentBreakdown && Object.keys(data.departmentBreakdown).length > 0) {
         const departmentData = Object.entries(data.departmentBreakdown).map(([dept, stats]: [string, any]) => [
           dept.toUpperCase(),
-          stats.count.toString(),
-          `UGX ${stats.revenue.toLocaleString()}`,
-          `UGX ${stats.approved.toLocaleString()}`
+          stats.count?.toString() || '0',
+          `UGX ${stats.revenue?.toLocaleString() || '0'}`,
+          `UGX ${stats.approved?.toLocaleString() || '0'}`
         ]);
 
         doc.autoTable({
-          startY: doc.lastAutoTable.finalY + 20,
+          startY: currentY,
           head: [['Department', 'Sales Count', 'Total Revenue', 'Approved Revenue']],
           body: departmentData,
           theme: 'grid'
