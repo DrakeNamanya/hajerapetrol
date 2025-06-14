@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DollarSign, Clock, CheckCircle, XCircle, AlertTriangle, User } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Expense {
   id: string;
@@ -30,7 +30,7 @@ interface ExpenseTrackerProps {
 
 export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, department = 'supermarket' }) => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [newExpense, setNewExpense] = useState({
     type: '',
