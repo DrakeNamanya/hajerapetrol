@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
     type: '',
     description: '',
     amount: '',
-    department: department
+    department: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +61,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
   };
 
   const submitExpense = async () => {
-    if (!newExpense.type || !newExpense.description || !newExpense.amount) {
+    if (!newExpense.type || !newExpense.description || !newExpense.amount || !newExpense.department) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -73,6 +72,12 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
 
     setLoading(true);
     try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        throw new Error('User not authenticated');
+      }
+
       const { error } = await supabase
         .from('expenses')
         .insert({
@@ -80,7 +85,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
           description: newExpense.description,
           amount: parseFloat(newExpense.amount),
           department: newExpense.department,
-          requested_by: (await supabase.auth.getUser()).data.user?.id
+          requested_by: userData.user.id
         });
 
       if (error) throw error;
@@ -94,7 +99,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
         type: '',
         description: '',
         amount: '',
-        department: department
+        department: ''
       });
 
       fetchExpenses();
@@ -112,6 +117,12 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
 
   const updateExpenseStatus = async (expenseId: string, newStatus: string, rejectionReason?: string) => {
     try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        throw new Error('User not authenticated');
+      }
+
       const updateData: any = {
         status: newStatus,
         updated_at: new Date().toISOString()
@@ -119,13 +130,13 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
 
       // Set the appropriate approval fields based on user role
       if (userRole === 'accountant' && newStatus === 'accountant_approved') {
-        updateData.approved_by_accountant = (await supabase.auth.getUser()).data.user?.id;
+        updateData.approved_by_accountant = userData.user.id;
         updateData.accountant_approved_at = new Date().toISOString();
       } else if (userRole === 'manager' && newStatus === 'manager_approved') {
-        updateData.approved_by_manager = (await supabase.auth.getUser()).data.user?.id;
+        updateData.approved_by_manager = userData.user.id;
         updateData.manager_approved_at = new Date().toISOString();
       } else if (userRole === 'director' && newStatus === 'director_approved') {
-        updateData.approved_by_director = (await supabase.auth.getUser()).data.user?.id;
+        updateData.approved_by_director = userData.user.id;
         updateData.director_approved_at = new Date().toISOString();
       }
 
@@ -218,14 +229,28 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Amount (UGX)</Label>
-                <Input
-                  type="number"
-                  value={newExpense.amount}
-                  onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                  placeholder="Enter amount"
-                />
+                <Label>Department</Label>
+                <Select value={newExpense.department} onValueChange={(value) => setNewExpense({...newExpense, department: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="supermarket">Supermarket</SelectItem>
+                    <SelectItem value="restaurant">Restaurant</SelectItem>
+                    <SelectItem value="fuel">Fuel Station</SelectItem>
+                    <SelectItem value="all">All Departments</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Amount (UGX)</Label>
+              <Input
+                type="number"
+                value={newExpense.amount}
+                onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                placeholder="Enter amount"
+              />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
