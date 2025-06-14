@@ -2,8 +2,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -24,6 +22,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log('Edge function started');
+    
+    // Check if API key exists
+    const apiKey = Deno.env.get("RESEND_API_KEY");
+    console.log('API key exists:', !!apiKey);
+    
+    if (!apiKey) {
+      console.error('RESEND_API_KEY environment variable is not set');
+      throw new Error('Email service not configured. Please contact administrator.');
+    }
+
+    const resend = new Resend(apiKey);
+
     const { email, role, department, inviterName, businessName }: InvitationEmailRequest = await req.json();
 
     console.log('Sending invitation email to:', email);
