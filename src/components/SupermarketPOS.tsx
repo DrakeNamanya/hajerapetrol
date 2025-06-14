@@ -66,6 +66,9 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const [paymentMethod, setPaymentMethod] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState<any>(null);
+  const [dailySales, setDailySales] = useState<Sale[]>([]);
+  const [salesSubmitted, setSalesSubmitted] = useState(false);
+  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   
   // Stock management form state
   const [stockForm, setStockForm] = useState({
@@ -312,6 +315,16 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       }
       return product;
     }));
+
+    // Add to daily sales
+    const newSale: Sale = {
+      id: Date.now(),
+      items: [...cart],
+      total,
+      paymentMethod,
+      timestamp: new Date()
+    };
+    setDailySales(prev => [...prev, newSale]);
 
     // Clear cart and payment method
     setCart([]);

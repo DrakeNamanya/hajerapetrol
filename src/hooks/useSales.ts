@@ -54,7 +54,18 @@ export const useSales = () => {
       const { data, error } = await supabase
         .from('sales')
         .insert({
-          ...saleData,
+          department: saleData.department,
+          sale_type: saleData.sale_type,
+          customer_name: saleData.customer_name,
+          table_number: saleData.table_number,
+          pump_number: saleData.pump_number,
+          items: saleData.items as any, // Cast to Json type
+          subtotal: saleData.subtotal,
+          tax: saleData.tax,
+          total: saleData.total,
+          payment_method: saleData.payment_method,
+          amount_received: saleData.amount_received,
+          change_amount: saleData.change_amount,
           created_by: user.id,
         })
         .select()
