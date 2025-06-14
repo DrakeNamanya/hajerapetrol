@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Fuel, TrendingUp } from "lucide-react";
+import { Fuel, TrendingUp, Database } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { useSales } from '@/hooks/useSales';
 
 interface FuelPOSProps {
   onSaleRecord: (sale: any) => void;
@@ -39,15 +40,17 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const [quantity, setQuantity] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [dailySales, setDailySales] = useState<any[]>([]);
-  const [salesSubmitted, setSalesSubmitted] = useState(false);
-  const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null);
+  const [pumpNumber, setPumpNumber] = useState('');
+
+  const { createSale, isCreatingSale, sales, getSalesSummary } = useSales();
 
   const selectedFuelData = fuelTypes.find(f => f.id === selectedFuel);
   const totalAmount = selectedFuelData ? parseFloat(quantity || '0') * selectedFuelData.price : 0;
-  const dailyTotal = dailySales.reduce((sum, sale) => sum + sale.total, 0);
+  
+  // Get database sales summary
+  const dbSalesSummary = getSalesSummary();
 
-  const handleSale = () => {
+  const handleSale = async () => {
     if (!selectedFuel || !quantity || !paymentMethod) {
       toast({
         title: "Error",
@@ -74,7 +77,32 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
         : fuel
     ));
 
-    const sale = {
+    const subtotal = totalAmount;
+    const tax = subtotal * 0.18;
+    const total = subtotal + tax;
+
+    // Save to database using the sales hook
+    const saleData = {
+      department: 'fuel' as const,
+      sale_type: 'fuel_sale',
+      customer_name: customerName || 'Walk-in Customer',
+      pump_number: pumpNumber,
+      items: [{
+        name: selectedFuelData?.name || '',
+        quantity: quantityNum,
+        price: selectedFuelData?.price || 0,
+        total: totalAmount
+      }],
+      subtotal,
+      tax,
+      total,
+      payment_method: paymentMethod,
+    };
+
+    createSale(saleData);
+
+    // Still call the legacy onSaleRecord for backward compatibility
+    const globalSale = {
       id: Date.now(),
       department: 'fuel',
       type: 'fuel_sale',
@@ -85,45 +113,24 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
         price: selectedFuelData?.price,
         total: totalAmount
       }],
-      total: totalAmount,
+      total,
       paymentMethod,
       timestamp: new Date(),
       status: 'pending'
     };
 
-    // Add to daily sales
-    setDailySales(prev => [...prev, sale]);
-
-    onSaleRecord(sale);
+    onSaleRecord(globalSale);
     
     // Reset form
     setSelectedFuel('');
     setQuantity('');
     setCustomerName('');
     setPaymentMethod('');
+    setPumpNumber('');
 
     toast({
       title: "Sale Recorded",
-      description: `Fuel sale of UGX ${totalAmount.toLocaleString()} recorded successfully`,
-    });
-  };
-
-  const submitDailySales = () => {
-    if (dailySales.length === 0) {
-      toast({
-        title: "No Sales",
-        description: "No sales to submit today",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSalesSubmitted(true);
-    setApprovalStatus('pending');
-    
-    toast({
-      title: "Sales Submitted",
-      description: "Daily sales have been submitted to accountant for approval",
+      description: `Fuel sale of UGX ${total.toLocaleString()} recorded successfully`,
     });
   };
 
@@ -175,6 +182,15 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
             </div>
 
             <div className="space-y-2">
+              <Label>Pump Number (Optional)</Label>
+              <Input
+                value={pumpNumber}
+                onChange={(e) => setPumpNumber(e.target.value)}
+                placeholder="Enter pump number"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label>Payment Method</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger>
@@ -204,8 +220,9 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
           <Button 
             onClick={handleSale}
             className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+            disabled={isCreatingSale}
           >
-            Record Sale
+            {isCreatingSale ? 'Processing...' : 'Record Sale & Save to Database'}
           </Button>
         </CardContent>
       </Card>
@@ -247,68 +264,70 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
         </CardContent>
       </Card>
 
-      {/* Daily Sales Summary */}
+      {/* Database Sales Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>Daily Sales Summary</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Database Sales Summary
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="bg-orange-50 p-4 rounded-lg mb-4">
-            <div className="flex justify-between items-center text-lg font-semibold">
-              <span>Today's Total Sales:</span>
-              <span className="text-orange-600">UGX {dailyTotal.toLocaleString()}</span>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex justify-between">
+                <span>Today's Sales:</span>
+                <span className="text-orange-600 font-semibold">UGX {dbSalesSummary.totalSales.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Transactions:</span>
+                <span className="font-semibold">{dbSalesSummary.salesCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pending:</span>
+                <Badge variant="secondary">{dbSalesSummary.pendingSales}</Badge>
+              </div>
+              <div className="flex justify-between">
+                <span>Approved:</span>
+                <Badge variant="default">{dbSalesSummary.approvedSales}</Badge>
+              </div>
             </div>
-            <p className="text-sm text-gray-600 mt-1">
-              {dailySales.length} transactions completed
-            </p>
           </div>
 
-          {dailySales.length > 0 && (
-            <div className="mb-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Fuel Type</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Payment</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dailySales.map(sale => (
-                    <TableRow key={sale.id}>
-                      <TableCell>{sale.timestamp.toLocaleTimeString()}</TableCell>
-                      <TableCell>{sale.items[0]?.name}</TableCell>
-                      <TableCell>{sale.items[0]?.quantity}L</TableCell>
-                      <TableCell>UGX {sale.total.toLocaleString()}</TableCell>
-                      <TableCell>{sale.paymentMethod}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          <hr className="my-4 border-gray-300" />
-
-          {!salesSubmitted ? (
-            <Button 
-              onClick={submitDailySales}
-              className="w-full"
-              disabled={dailySales.length === 0}
-            >
-              Submit Daily Sales to Accountant
-            </Button>
-          ) : (
-            <div className="text-center">
-              <Badge variant={approvalStatus === 'approved' ? 'default' : approvalStatus === 'rejected' ? 'destructive' : 'secondary'}>
-                {approvalStatus === 'pending' && 'Awaiting Accountant Approval'}
-                {approvalStatus === 'approved' && 'Approved by Accountant'}
-                {approvalStatus === 'rejected' && 'Rejected by Accountant'}
-              </Badge>
-            </div>
-          )}
+          {/* Recent Sales from Database */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Fuel Type</TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Payment</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sales.filter(sale => sale.department === 'fuel').slice(0, 5).map(sale => (
+                <TableRow key={sale.id}>
+                  <TableCell>{new Date(sale.created_at).toLocaleTimeString()}</TableCell>
+                  <TableCell>{sale.customer_name || 'Walk-in'}</TableCell>
+                  <TableCell>{Array.isArray(sale.items) && sale.items[0]?.name}</TableCell>
+                  <TableCell>{Array.isArray(sale.items) && sale.items[0]?.quantity}L</TableCell>
+                  <TableCell>UGX {Number(sale.total).toLocaleString()}</TableCell>
+                  <TableCell>{sale.payment_method}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={sale.status === 'approved' ? 'default' : 
+                               sale.status === 'pending' ? 'secondary' : 'destructive'}
+                    >
+                      {sale.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
