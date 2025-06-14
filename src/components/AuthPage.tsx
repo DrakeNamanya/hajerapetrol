@@ -6,57 +6,98 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fuel, Building2, Mail } from 'lucide-react';
+import { Fuel, Building2, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthPage: React.FC = () => {
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, error, clearError, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState('');
+  const [localLoading, setLocalLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Clear errors when switching tabs or changing input
+  const handleClearErrors = () => {
+    setLocalError('');
+    setMessage('');
+    clearError();
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    handleClearErrors();
+    
     if (!email || !password || !fullName) {
-      setError('Please fill in all fields');
+      setLocalError('Please fill in all fields');
       return;
     }
 
-    setLoading(true);
-    setError('');
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters long');
+      return;
+    }
 
-    const { error } = await signUp(email, password, fullName);
-    
-    if (error) {
-      setError(error.message);
-    } else {
-      setMessage('Please check your email for verification link');
+    setLocalLoading(true);
+
+    try {
+      const { error } = await signUp(email, password, fullName);
+      
+      if (error) {
+        if (error.message.includes('already registered')) {
+          setLocalError('This email is already registered. Please sign in instead.');
+        } else if (error.message.includes('weak password')) {
+          setLocalError('Password is too weak. Please choose a stronger password.');
+        } else {
+          setLocalError(error.message);
+        }
+      } else {
+        setMessage('Please check your email for verification link');
+        // Clear form on success
+        setEmail('');
+        setPassword('');
+        setFullName('');
+      }
+    } catch (error: any) {
+      setLocalError(error.message || 'An unexpected error occurred');
     }
     
-    setLoading(false);
+    setLocalLoading(false);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    handleClearErrors();
+    
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setLocalError('Please fill in all fields');
       return;
     }
 
-    setLoading(true);
-    setError('');
+    setLocalLoading(true);
 
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setLocalError('Invalid email or password. Please check your credentials.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setLocalError('Please check your email and click the confirmation link before signing in.');
+        } else {
+          setLocalError(error.message);
+        }
+      }
+    } catch (error: any) {
+      setLocalError(error.message || 'An unexpected error occurred');
     }
     
-    setLoading(false);
+    setLocalLoading(false);
   };
+
+  const displayError = error || localError;
+  const isLoading = loading || localLoading;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600 relative overflow-hidden">
@@ -90,7 +131,7 @@ export const AuthPage: React.FC = () => {
         </CardHeader>
         
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full">
+          <Tabs defaultValue="signin" className="w-full" onValueChange={handleClearErrors}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -104,10 +145,14 @@ export const AuthPage: React.FC = () => {
                     id="signin-email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      handleClearErrors();
+                    }}
                     placeholder="Enter your email"
                     className="border-2 border-orange-200 focus:border-orange-500"
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="email"
                   />
                 </div>
                 
@@ -117,19 +162,23 @@ export const AuthPage: React.FC = () => {
                     id="signin-password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      handleClearErrors();
+                    }}
                     placeholder="Enter your password"
                     className="border-2 border-orange-200 focus:border-orange-500"
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="current-password"
                   />
                 </div>
 
                 <Button 
                   type="submit"
                   className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg"
-                  disabled={loading}
+                  disabled={isLoading}
                 >
-                  {loading ? 'Signing In...' : 'Sign In'}
+                  {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
               </form>
             </TabsContent>
@@ -142,10 +191,14 @@ export const AuthPage: React.FC = () => {
                     id="signup-name"
                     type="text"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      handleClearErrors();
+                    }}
                     placeholder="Enter your full name"
                     className="border-2 border-orange-200 focus:border-orange-500"
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="name"
                   />
                 </div>
                 
@@ -155,10 +208,14 @@ export const AuthPage: React.FC = () => {
                     id="signup-email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      handleClearErrors();
+                    }}
                     placeholder="Enter your email"
                     className="border-2 border-orange-200 focus:border-orange-500"
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="email"
                   />
                 </div>
                 
@@ -168,19 +225,23 @@ export const AuthPage: React.FC = () => {
                     id="signup-password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a password"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      handleClearErrors();
+                    }}
+                    placeholder="Create a password (min 6 characters)"
                     className="border-2 border-orange-200 focus:border-orange-500"
-                    disabled={loading}
+                    disabled={isLoading}
+                    autoComplete="new-password"
                   />
                 </div>
 
                 <Button 
                   type="submit"
                   className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg"
-                  disabled={loading}
+                  disabled={isLoading}
                 >
-                  {loading ? 'Creating Account...' : 'Sign Up'}
+                  {isLoading ? 'Creating Account...' : 'Sign Up'}
                 </Button>
               </form>
               
@@ -194,14 +255,16 @@ export const AuthPage: React.FC = () => {
             </TabsContent>
           </Tabs>
 
-          {error && (
+          {displayError && (
             <Alert className="border-red-200 bg-red-50 mt-4">
-              <AlertDescription className="text-red-600">{error}</AlertDescription>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-red-600">{displayError}</AlertDescription>
             </Alert>
           )}
           
           {message && (
             <Alert className="border-green-200 bg-green-50 mt-4">
+              <Mail className="h-4 w-4" />
               <AlertDescription className="text-green-600">{message}</AlertDescription>
             </Alert>
           )}
