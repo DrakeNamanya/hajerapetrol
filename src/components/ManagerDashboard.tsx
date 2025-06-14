@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Fuel, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Fuel, AlertTriangle, CheckCircle, DollarSign } from 'lucide-react';
 
 interface Sale {
   id: number;
@@ -22,6 +22,17 @@ interface Sale {
   tableNumber?: string;
 }
 
+interface Expense {
+  id: number;
+  category: string;
+  amount: number;
+  description: string;
+  department: string;
+  requestedBy: string;
+  timestamp: Date;
+  status: 'pending' | 'manager_approved' | 'director_approved' | 'rejected';
+}
+
 interface ManagerDashboardProps {
   sales: Sale[];
   onApprove: (saleId: number) => void;
@@ -34,6 +45,40 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     diesel: '',
     kerosene: ''
   });
+
+  // Mock expense data from accountant
+  const [expenses, setExpenses] = useState<Expense[]>([
+    {
+      id: 1,
+      category: 'Office Supplies',
+      amount: 150000,
+      description: 'Printer paper, pens, and stationery',
+      department: 'All',
+      requestedBy: 'Sarah Accountant',
+      timestamp: new Date(),
+      status: 'pending'
+    },
+    {
+      id: 2,
+      category: 'Equipment Maintenance',
+      amount: 350000,
+      description: 'Fuel pump maintenance and calibration',
+      department: 'Fuel',
+      requestedBy: 'Sarah Accountant',
+      timestamp: new Date(),
+      status: 'pending'
+    },
+    {
+      id: 3,
+      category: 'Marketing',
+      amount: 500000,
+      description: 'Local radio advertisement campaign',
+      department: 'All',
+      requestedBy: 'Sarah Accountant',
+      timestamp: new Date(),
+      status: 'pending'
+    }
+  ]);
 
   // Simulated fuel data - in real app this would come from fuel POS
   const fuelInventory = [
@@ -66,6 +111,35 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     });
   };
 
+  const handleExpenseApprove = (expenseId: number) => {
+    setExpenses(prev => 
+      prev.map(expense => 
+        expense.id === expenseId 
+          ? { ...expense, status: 'manager_approved' as const }
+          : expense
+      )
+    );
+    toast({
+      title: "Expense Approved",
+      description: "Expense has been approved and sent to director for final approval",
+    });
+  };
+
+  const handleExpenseReject = (expenseId: number) => {
+    setExpenses(prev => 
+      prev.map(expense => 
+        expense.id === expenseId 
+          ? { ...expense, status: 'rejected' as const }
+          : expense
+      )
+    );
+    toast({
+      title: "Expense Rejected",
+      description: "Expense has been rejected",
+      variant: "destructive"
+    });
+  };
+
   const handleDipstickVerification = () => {
     toast({
       title: "Dipstick Reading Verified",
@@ -83,12 +157,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     };
   });
 
+  const pendingExpenses = expenses.filter(expense => expense.status === 'pending');
+  const approvedExpenses = expenses.filter(expense => expense.status === 'manager_approved');
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sales">Sales Approval</TabsTrigger>
+          <TabsTrigger value="expenses">Expense Approval</TabsTrigger>
           <TabsTrigger value="fuel">Fuel Verification</TabsTrigger>
         </TabsList>
 
@@ -124,9 +202,9 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
             <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
               <CardContent className="p-6">
                 <div className="text-2xl font-bold text-purple-600">
-                  {pendingSales.length}
+                  {pendingExpenses.length}
                 </div>
-                <p className="text-purple-600 font-medium">Awaiting Approval</p>
+                <p className="text-purple-600 font-medium">Pending Expenses</p>
               </CardContent>
             </Card>
           </div>
@@ -239,6 +317,89 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="expenses" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-6 w-6" />
+                Expense Requests from Accountant
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pendingExpenses.length > 0 ? (
+                <div className="space-y-4">
+                  {pendingExpenses.map(expense => (
+                    <div key={expense.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-lg">{expense.category}</h4>
+                            <Badge className={getDepartmentColor(expense.department)}>
+                              {expense.department.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="text-gray-700 mb-2">{expense.description}</p>
+                          <div className="text-sm text-gray-600">
+                            <p>Requested by: {expense.requestedBy}</p>
+                            <p>Date: {expense.timestamp.toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-2xl font-bold text-red-600">
+                            UGX {expense.amount.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleExpenseApprove(expense.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          Approve & Send to Director
+                        </Button>
+                        <Button 
+                          onClick={() => handleExpenseReject(expense.id)}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-center py-8">No pending expense requests</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {approvedExpenses.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Expenses Sent to Director</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {approvedExpenses.map(expense => (
+                    <div key={expense.id} className="flex justify-between items-center border-b pb-2">
+                      <div>
+                        <span className="font-medium">{expense.category}</span>
+                        <span className="text-sm text-gray-600 ml-2">({expense.department})</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">UGX {expense.amount.toLocaleString()}</div>
+                        <Badge className="bg-blue-100 text-blue-800">Awaiting Director</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="fuel" className="space-y-6">

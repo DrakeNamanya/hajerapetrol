@@ -5,10 +5,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "@/hooks/use-toast";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Fuel, Building2, UtensilsCrossed, AlertTriangle, CheckCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Fuel, Building2, UtensilsCrossed, AlertTriangle, CheckCircle, Settings, UserPlus, Edit } from 'lucide-react';
 
 interface Sale {
   id: number;
@@ -23,55 +28,199 @@ interface Sale {
   tableNumber?: string;
 }
 
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'director' | 'manager' | 'accountant' | 'fuel_cashier' | 'supermarket_cashier' | 'restaurant_cashier';
+  department: 'executive' | 'management' | 'accounting' | 'fuel' | 'supermarket' | 'restaurant';
+  active: boolean;
+}
+
+interface Expense {
+  id: number;
+  category: string;
+  amount: number;
+  description: string;
+  department: string;
+  requestedBy: string;
+  timestamp: Date;
+  status: 'pending' | 'manager_approved' | 'director_approved' | 'rejected';
+}
+
+interface BusinessSettings {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+}
+
 interface DirectorDashboardProps {
   sales: Sale[];
 }
 
 export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) => {
   const [timeFilter, setTimeFilter] = useState('month');
-  
-  // Mock data for comprehensive business overview
-  const mockSalesData = [
-    { name: 'Jan', fuel: 2400000, supermarket: 1800000, restaurant: 900000, total: 5100000 },
-    { name: 'Feb', fuel: 2200000, supermarket: 1900000, restaurant: 950000, total: 5050000 },
-    { name: 'Mar', fuel: 2600000, supermarket: 2100000, restaurant: 1100000, total: 5800000 },
-    { name: 'Apr', fuel: 2800000, supermarket: 2000000, restaurant: 1050000, total: 5850000 },
-    { name: 'May', fuel: 3000000, supermarket: 2200000, restaurant: 1200000, total: 6400000 },
-    { name: 'Jun', fuel: 2900000, supermarket: 2150000, restaurant: 1150000, total: 6200000 },
-  ];
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: '',
+    department: '',
+    password: ''
+  });
 
-  const departmentPerformance = [
-    { department: 'Fuel Station', revenue: 17900000, growth: 12.5, transactions: 2450, avgTicket: 7306 },
-    { department: 'Supermarket', revenue: 12350000, growth: 8.3, transactions: 4200, avgTicket: 2940 },
-    { department: 'Restaurant', revenue: 6450000, growth: 15.2, transactions: 1800, avgTicket: 3583 },
-  ];
+  const [businessSettings, setBusinessSettings] = useState<BusinessSettings>({
+    name: 'HIPEMART OILS',
+    address: 'BUKHALIHA ROAD, BUSIA',
+    phone: '+256 776 429450',
+    email: 'info@hipemartoils.com',
+    website: 'www.hipemartoils.com'
+  });
 
-  const pieData = [
-    { name: 'Fuel', value: 17900000, color: '#f97316' },
-    { name: 'Supermarket', value: 12350000, color: '#10b981' },
-    { name: 'Restaurant', value: 6450000, color: '#f59e0b' },
-  ];
+  // Mock users data
+  const [users, setUsers] = useState<User[]>([
+    { id: '1', email: 'director@hipemartoils.com', name: 'James Director', role: 'director', department: 'executive', active: true },
+    { id: '2', email: 'manager@hipemartoils.com', name: 'John Manager', role: 'manager', department: 'management', active: true },
+    { id: '3', email: 'accountant@hipemartoils.com', name: 'Sarah Accountant', role: 'accountant', department: 'accounting', active: true },
+    { id: '4', email: 'fuel@hipemartoils.com', name: 'Mike Fuel', role: 'fuel_cashier', department: 'fuel', active: true },
+    { id: '5', email: 'supermarket@hipemartoils.com', name: 'Lisa Market', role: 'supermarket_cashier', department: 'supermarket', active: true },
+    { id: '6', email: 'restaurant@hipemartoils.com', name: 'Tom Chef', role: 'restaurant_cashier', department: 'restaurant', active: true },
+  ]);
+
+  // Mock expenses from manager
+  const [expenses, setExpenses] = useState<Expense[]>([
+    {
+      id: 1,
+      category: 'Equipment Maintenance',
+      amount: 350000,
+      description: 'Fuel pump maintenance and calibration',
+      department: 'Fuel',
+      requestedBy: 'John Manager',
+      timestamp: new Date(),
+      status: 'manager_approved'
+    },
+    {
+      id: 2,
+      category: 'Marketing Campaign',
+      amount: 500000,
+      description: 'Local radio advertisement campaign',
+      department: 'All',
+      requestedBy: 'John Manager',
+      timestamp: new Date(),
+      status: 'manager_approved'
+    }
+  ]);
+
+  // Real data from sales prop
+  const realSalesData = React.useMemo(() => {
+    const monthlyData = sales.reduce((acc, sale) => {
+      const month = sale.timestamp.toLocaleDateString('en-US', { month: 'short' });
+      if (!acc[month]) {
+        acc[month] = { name: month, fuel: 0, supermarket: 0, restaurant: 0, total: 0 };
+      }
+      acc[month][sale.department as keyof typeof acc[typeof month]] += sale.total;
+      acc[month].total += sale.total;
+      return acc;
+    }, {} as Record<string, any>);
+    
+    return Object.values(monthlyData);
+  }, [sales]);
+
+  const departmentPerformance = React.useMemo(() => {
+    return ['fuel', 'supermarket', 'restaurant'].map(dept => {
+      const deptSales = sales.filter(sale => sale.department === dept);
+      const revenue = deptSales.reduce((sum, sale) => sum + sale.total, 0);
+      return {
+        department: dept.charAt(0).toUpperCase() + dept.slice(1),
+        revenue,
+        growth: Math.random() * 20, // Mock growth for demo
+        transactions: deptSales.length,
+        avgTicket: deptSales.length > 0 ? revenue / deptSales.length : 0
+      };
+    });
+  }, [sales]);
+
+  const pieData = departmentPerformance.map(dept => ({
+    name: dept.department,
+    value: dept.revenue,
+    color: dept.department === 'Fuel' ? '#f97316' : dept.department === 'Supermarket' ? '#10b981' : '#f59e0b'
+  }));
 
   const totalRevenue = departmentPerformance.reduce((sum, dept) => sum + dept.revenue, 0);
   const totalTransactions = departmentPerformance.reduce((sum, dept) => sum + dept.transactions, 0);
   const avgGrowth = departmentPerformance.reduce((sum, dept) => sum + dept.growth, 0) / departmentPerformance.length;
 
-  // Mock KPI data
   const kpis = [
     { title: 'Total Revenue', value: `UGX ${totalRevenue.toLocaleString()}`, change: 14.2, icon: DollarSign },
     { title: 'Total Transactions', value: totalTransactions.toLocaleString(), change: 8.7, icon: ShoppingCart },
     { title: 'Average Growth', value: `${avgGrowth.toFixed(1)}%`, change: 2.3, icon: TrendingUp },
-    { title: 'Customer Satisfaction', value: '94.5%', change: 1.8, icon: Users },
+    { title: 'Active Users', value: users.filter(u => u.active).length.toString(), change: 1.8, icon: Users },
   ];
 
-  // Mock expense data
-  const expenses = [
-    { category: 'Fuel Purchases', amount: 8500000, approved: true, department: 'Fuel' },
-    { category: 'Inventory Restocking', amount: 4200000, approved: true, department: 'Supermarket' },
-    { category: 'Staff Salaries', amount: 2800000, approved: false, department: 'All' },
-    { category: 'Equipment Maintenance', amount: 650000, approved: true, department: 'All' },
-    { category: 'Marketing Campaign', amount: 1200000, approved: false, department: 'All' },
-  ];
+  const handleCreateUser = () => {
+    if (!newUser.name || !newUser.email || !newUser.role || !newUser.password) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const user: User = {
+      id: (users.length + 1).toString(),
+      email: newUser.email,
+      name: newUser.name,
+      role: newUser.role as User['role'],
+      department: newUser.department as User['department'],
+      active: true
+    };
+
+    setUsers(prev => [...prev, user]);
+    setNewUser({ name: '', email: '', role: '', department: '', password: '' });
+    
+    toast({
+      title: "User Created",
+      description: `${user.name} has been created successfully`,
+    });
+  };
+
+  const handleExpenseApprove = (expenseId: number) => {
+    setExpenses(prev => 
+      prev.map(expense => 
+        expense.id === expenseId 
+          ? { ...expense, status: 'director_approved' as const }
+          : expense
+      )
+    );
+    toast({
+      title: "Expense Approved",
+      description: "Expense has been approved for payment",
+    });
+  };
+
+  const handleExpenseReject = (expenseId: number) => {
+    setExpenses(prev => 
+      prev.map(expense => 
+        expense.id === expenseId 
+          ? { ...expense, status: 'rejected' as const }
+          : expense
+      )
+    );
+    toast({
+      title: "Expense Rejected",
+      description: "Expense has been rejected",
+      variant: "destructive"
+    });
+  };
+
+  const handleBusinessSettingsUpdate = () => {
+    toast({
+      title: "Business Settings Updated",
+      description: "Business information has been updated successfully",
+    });
+  };
 
   const getDepartmentIcon = (department: string) => {
     switch (department.toLowerCase()) {
@@ -91,14 +240,19 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     }
   };
 
+  const pendingExpenses = expenses.filter(expense => expense.status === 'manager_approved');
+  const approvedExpenses = expenses.filter(expense => expense.status === 'director_approved');
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Business Overview</TabsTrigger>
-          <TabsTrigger value="performance">Department Performance</TabsTrigger>
-          <TabsTrigger value="financials">Financial Analysis</TabsTrigger>
-          <TabsTrigger value="operations">Operations</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
+          <TabsTrigger value="expenses">Expenses</TabsTrigger>
+          <TabsTrigger value="reports">Real Reports</TabsTrigger>
+          <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsTrigger value="settings">Business Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -137,65 +291,44 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
             ))}
           </div>
 
-          {/* Revenue Trend Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue Trend Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer
-                config={{
-                  fuel: { label: "Fuel", color: "#f97316" },
-                  supermarket: { label: "Supermarket", color: "#10b981" },
-                  restaurant: { label: "Restaurant", color: "#f59e0b" },
-                }}
-                className="h-80"
-              >
-                <AreaChart data={mockSalesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area type="monotone" dataKey="fuel" stackId="1" fill="#f97316" />
-                  <Area type="monotone" dataKey="supermarket" stackId="1" fill="#10b981" />
-                  <Area type="monotone" dataKey="restaurant" stackId="1" fill="#f59e0b" />
-                </AreaChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
-          {/* Department Revenue Distribution */}
+          {/* Revenue Distribution */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Revenue Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartContainer
-                  config={{
-                    fuel: { label: "Fuel", color: "#f97316" },
-                    supermarket: { label: "Supermarket", color: "#10b981" },
-                    restaurant: { label: "Restaurant", color: "#f59e0b" },
-                  }}
-                  className="h-64"
-                >
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                  </PieChart>
-                </ChartContainer>
+                {pieData.length > 0 ? (
+                  <ChartContainer
+                    config={{
+                      fuel: { label: "Fuel", color: "#f97316" },
+                      supermarket: { label: "Supermarket", color: "#10b981" },
+                      restaurant: { label: "Restaurant", color: "#f59e0b" },
+                    }}
+                    className="h-64"
+                  >
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                ) : (
+                  <div className="h-64 flex items-center justify-center text-gray-500">
+                    No sales data available
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -217,7 +350,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
                       <div className="text-right">
                         <p className="font-semibold">UGX {dept.revenue.toLocaleString()}</p>
                         <p className={`text-sm ${dept.growth > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          +{dept.growth}%
+                          +{dept.growth.toFixed(1)}%
                         </p>
                       </div>
                     </div>
@@ -259,7 +392,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
                       </TableCell>
                       <TableCell>
                         <Badge className={dept.growth > 10 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                          +{dept.growth}%
+                          +{dept.growth.toFixed(1)}%
                         </Badge>
                       </TableCell>
                       <TableCell>{dept.transactions.toLocaleString()}</TableCell>
@@ -278,157 +411,342 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
           </Card>
         </TabsContent>
 
-        <TabsContent value="financials" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TabsContent value="expenses" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-6 w-6" />
+                Expense Approvals from Manager
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pendingExpenses.length > 0 ? (
+                <div className="space-y-4">
+                  {pendingExpenses.map(expense => (
+                    <div key={expense.id} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-lg">{expense.category}</h4>
+                            <Badge className={getDepartmentColor(expense.department)}>
+                              {expense.department.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <p className="text-gray-700 mb-2">{expense.description}</p>
+                          <div className="text-sm text-gray-600">
+                            <p>Approved by: {expense.requestedBy}</p>
+                            <p>Date: {expense.timestamp.toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <div className="text-2xl font-bold text-red-600">
+                            UGX {expense.amount.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleExpenseApprove(expense.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          Approve Payment
+                        </Button>
+                        <Button 
+                          onClick={() => handleExpenseReject(expense.id)}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-600 text-center py-8">No pending expense approvals</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {approvedExpenses.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Expense Management</CardTitle>
+                <CardTitle>Approved Expenses - Ready for Payment</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {expenses.map((expense, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  {approvedExpenses.map(expense => (
+                    <div key={expense.id} className="flex justify-between items-center border-b pb-2">
                       <div>
-                        <p className="font-medium">{expense.category}</p>
-                        <p className="text-sm text-gray-600">{expense.department}</p>
+                        <span className="font-medium">{expense.category}</span>
+                        <span className="text-sm text-gray-600 ml-2">({expense.department})</span>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">UGX {expense.amount.toLocaleString()}</p>
-                        <div className="flex items-center gap-1">
-                          {expense.approved ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                          )}
-                          <span className={`text-xs ${expense.approved ? 'text-green-600' : 'text-yellow-600'}`}>
-                            {expense.approved ? 'Approved' : 'Pending'}
-                          </span>
-                        </div>
+                        <div className="font-semibold">UGX {expense.amount.toLocaleString()}</div>
+                        <Badge className="bg-green-100 text-green-800">Payment Approved</Badge>
                       </div>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Profit Margin Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {departmentPerformance.map((dept, index) => {
-                    const margin = (dept.revenue * 0.25) / dept.revenue * 100; // Mock 25% margin
-                    return (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{dept.department}</span>
-                          <span className="text-sm text-gray-600">{margin.toFixed(1)}%</span>
-                        </div>
-                        <Progress value={margin} className="h-2" />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>Revenue: UGX {dept.revenue.toLocaleString()}</span>
-                          <span>Profit: UGX {(dept.revenue * 0.25).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          )}
         </TabsContent>
 
-        <TabsContent value="operations" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Operational Health</CardTitle>
-              </CardHeader>
-              <CardContent>
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Real-Time Sales Reports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sales.length > 0 ? (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>System Uptime</span>
-                    <Badge className="bg-green-100 text-green-800">99.8%</Badge>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <h4 className="font-semibold mb-2">Today's Sales</h4>
+                        <p className="text-2xl font-bold">UGX {sales.reduce((sum, sale) => sum + sale.total, 0).toLocaleString()}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <h4 className="font-semibold mb-2">Total Transactions</h4>
+                        <p className="text-2xl font-bold">{sales.length}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <h4 className="font-semibold mb-2">Average Sale</h4>
+                        <p className="text-2xl font-bold">UGX {sales.length > 0 ? (sales.reduce((sum, sale) => sum + sale.total, 0) / sales.length).toLocaleString() : '0'}</p>
+                      </CardContent>
+                    </Card>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span>Active Users</span>
-                    <span className="font-semibold">156</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Pending Approvals</span>
-                    <Badge className="bg-yellow-100 text-yellow-800">8</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Inventory Alerts</span>
-                    <Badge className="bg-red-100 text-red-800">3</Badge>
-                  </div>
+                  
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Department</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sales.slice(-10).reverse().map(sale => (
+                        <TableRow key={sale.id}>
+                          <TableCell>{sale.timestamp.toLocaleTimeString()}</TableCell>
+                          <TableCell>
+                            <Badge className={getDepartmentColor(sale.department)}>
+                              {sale.department.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{sale.customer}</TableCell>
+                          <TableCell>{sale.items.length} items</TableCell>
+                          <TableCell className="font-semibold">UGX {sale.total.toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge className={sale.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                              {sale.status.replace('_', ' ').toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              </CardContent>
-            </Card>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No sales data available. Sales will appear here as they are made.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Staff Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span>Fuel Cashiers</span>
-                    <div className="text-right">
-                      <p className="font-semibold">4 Active</p>
-                      <p className="text-xs text-green-600">95% Efficiency</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Supermarket Staff</span>
-                    <div className="text-right">
-                      <p className="font-semibold">8 Active</p>
-                      <p className="text-xs text-green-600">92% Efficiency</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Restaurant Staff</span>
-                    <div className="text-right">
-                      <p className="font-semibold">6 Active</p>
-                      <p className="text-xs text-yellow-600">88% Efficiency</p>
-                    </div>
-                  </div>
+        <TabsContent value="users" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="h-6 w-6" />
+                Create New User
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    value={newUser.name}
+                    onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter full name"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter email address"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={newUser.role} onValueChange={(value) => setNewUser(prev => ({ ...prev, role: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="accountant">Accountant</SelectItem>
+                      <SelectItem value="fuel_cashier">Fuel Cashier</SelectItem>
+                      <SelectItem value="supermarket_cashier">Supermarket Cashier</SelectItem>
+                      <SelectItem value="restaurant_cashier">Restaurant Cashier</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="department">Department</Label>
+                  <Select value={newUser.department} onValueChange={(value) => setNewUser(prev => ({ ...prev, department: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="management">Management</SelectItem>
+                      <SelectItem value="accounting">Accounting</SelectItem>
+                      <SelectItem value="fuel">Fuel</SelectItem>
+                      <SelectItem value="supermarket">Supermarket</SelectItem>
+                      <SelectItem value="restaurant">Restaurant</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="Enter password"
+                  />
+                </div>
+              </div>
+              <Button onClick={handleCreateUser} className="mt-4 w-full">
+                Create User
+              </Button>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Critical Alerts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2 p-2 bg-red-50 rounded">
-                    <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-red-800">Low Fuel Inventory</p>
-                      <p className="text-xs text-red-600">Premium fuel below 500L</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2 bg-yellow-50 rounded">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-yellow-800">Pending Manager Approval</p>
-                      <p className="text-xs text-yellow-600">5 sales awaiting approval</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 p-2 bg-blue-50 rounded">
-                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">System Backup</p>
-                      <p className="text-xs text-blue-600">Completed successfully</p>
-                    </div>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Existing Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map(user => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {user.role.replace('_', ' ').toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getDepartmentColor(user.department)}>
+                          {user.department.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                          {user.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-6 w-6" />
+                Business Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="businessName">Business Name</Label>
+                  <Input
+                    id="businessName"
+                    value={businessSettings.name}
+                    onChange={(e) => setBusinessSettings(prev => ({ ...prev, name: e.target.value }))}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    value={businessSettings.phone}
+                    onChange={(e) => setBusinessSettings(prev => ({ ...prev, phone: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={businessSettings.email}
+                    onChange={(e) => setBusinessSettings(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={businessSettings.website}
+                    onChange={(e) => setBusinessSettings(prev => ({ ...prev, website: e.target.value }))}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={businessSettings.address}
+                    onChange={(e) => setBusinessSettings(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Enter business address"
+                  />
+                </div>
+              </div>
+              <Button onClick={handleBusinessSettingsUpdate} className="mt-4 w-full">
+                Update Business Information
+              </Button>
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> These settings will appear on all receipts and invoices generated by the system.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
