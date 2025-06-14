@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Clock, Users } from 'lucide-react';
 import { useSales } from '@/hooks/useSales';
 
@@ -247,7 +246,15 @@ export const SalesAnalytics: React.FC = () => {
               <CardTitle>Revenue Over Time</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-80">
+              <ChartContainer
+                config={{
+                  revenue: {
+                    label: "Revenue",
+                    color: "#8884d8",
+                  },
+                }}
+                className="h-80"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -269,7 +276,7 @@ export const SalesAnalytics: React.FC = () => {
                     />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartContainer>
             </CardContent>
           </Card>
         </TabsContent>
@@ -281,7 +288,15 @@ export const SalesAnalytics: React.FC = () => {
                 <CardTitle>Revenue by Department</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-80">
+                <ChartContainer
+                  config={{
+                    revenue: {
+                      label: "Revenue",
+                      color: "#8884d8",
+                    },
+                  }}
+                  className="h-80"
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -301,7 +316,7 @@ export const SalesAnalytics: React.FC = () => {
                       <ChartTooltip content={<ChartTooltipContent />} />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
+                </ChartContainer>
               </CardContent>
             </Card>
 
@@ -310,7 +325,15 @@ export const SalesAnalytics: React.FC = () => {
                 <CardTitle>Sales Count by Department</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-80">
+                <ChartContainer
+                  config={{
+                    count: {
+                      label: "Sales Count",
+                      color: "#82ca9d",
+                    },
+                  }}
+                  className="h-80"
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={departmentChartData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -320,7 +343,7 @@ export const SalesAnalytics: React.FC = () => {
                       <Bar dataKey="count" fill="#82ca9d" />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </ChartContainer>
               </CardContent>
             </Card>
           </div>
@@ -332,7 +355,15 @@ export const SalesAnalytics: React.FC = () => {
               <CardTitle>Sales Activity by Hour</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-80">
+              <ChartContainer
+                config={{
+                  sales: {
+                    label: "Sales Count",
+                    color: "#8884d8",
+                  },
+                }}
+                className="h-80"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={hourlyData}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -348,7 +379,7 @@ export const SalesAnalytics: React.FC = () => {
                     <Bar dataKey="sales" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartContainer>
             </CardContent>
           </Card>
         </TabsContent>
