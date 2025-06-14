@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,11 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Fuel, Building2, UtensilsCrossed, AlertTriangle, CheckCircle, Settings, UserPlus, Edit, FileText } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Fuel, Building2, UtensilsCrossed, AlertTriangle, CheckCircle, Settings, UserPlus, Edit, FileText, UserX, UserCheck } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Database } from '@/integrations/supabase/types';
+
+type UserProfile = Database['public']['Tables']['profiles']['Row'];
 
 interface Sale {
   id: number;
@@ -25,15 +29,6 @@ interface Sale {
   timestamp: Date;
   status: string;
   tableNumber?: string;
-}
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'director' | 'manager' | 'accountant' | 'fuel_cashier' | 'supermarket_cashier' | 'restaurant_cashier';
-  department: 'executive' | 'management' | 'accounting' | 'fuel' | 'supermarket' | 'restaurant';
-  active: boolean;
 }
 
 interface Expense {
@@ -61,13 +56,8 @@ interface DirectorDashboardProps {
 
 export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) => {
   const [timeFilter, setTimeFilter] = useState('month');
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    role: '',
-    department: '',
-    password: ''
-  });
+  const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings>({
     name: 'HIPEMART OILS',
@@ -76,16 +66,6 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     email: 'info@hipemartoils.com',
     website: 'www.hipemartoils.com'
   });
-
-  // Mock users data
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', email: 'director@hipemartoils.com', name: 'James Director', role: 'director', department: 'executive', active: true },
-    { id: '2', email: 'manager@hipemartoils.com', name: 'John Manager', role: 'manager', department: 'management', active: true },
-    { id: '3', email: 'accountant@hipemartoils.com', name: 'Sarah Accountant', role: 'accountant', department: 'accounting', active: true },
-    { id: '4', email: 'fuel@hipemartoils.com', name: 'Mike Fuel', role: 'fuel_cashier', department: 'fuel', active: true },
-    { id: '5', email: 'supermarket@hipemartoils.com', name: 'Lisa Market', role: 'supermarket_cashier', department: 'supermarket', active: true },
-    { id: '6', email: 'restaurant@hipemartoils.com', name: 'Tom Chef', role: 'restaurant_cashier', department: 'restaurant', active: true },
-  ]);
 
   // Mock expenses from manager
   const [expenses, setExpenses] = useState<Expense[]>([
@@ -110,6 +90,114 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
       status: 'manager_approved'
     }
   ]);
+
+  // Fetch real team members from Supabase
+  useEffect(() => {
+    fetchTeamMembers();
+  }, []);
+
+  const fetchTeamMembers = async () => {
+    try {
+      setLoadingUsers(true);
+      console.log('Fetching team members from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching team members:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load team members",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Team members fetched:', data);
+        setTeamMembers(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchTeamMembers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load team members",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_active: !currentStatus })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating user status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update user status",
+          variant: "destructive",
+        });
+      } else {
+        setTeamMembers(prev => prev.map(member => 
+          member.id === userId 
+            ? { ...member, is_active: !currentStatus }
+            : member
+        ));
+        toast({
+          title: "Success",
+          description: `User ${!currentStatus ? 'activated' : 'deactivated'} successfully`,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateUserRole = async (userId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating user role:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update user role",
+          variant: "destructive",
+        });
+      } else {
+        setTeamMembers(prev => prev.map(member => 
+          member.id === userId 
+            ? { ...member, role: newRole as any }
+            : member
+        ));
+        toast({
+          title: "Success",
+          description: "User role updated successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Real data from sales prop
   const realSalesData = React.useMemo(() => {
@@ -184,36 +272,8 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     { title: 'Total Revenue', value: `UGX ${totalRevenue.toLocaleString()}`, change: 14.2, icon: DollarSign },
     { title: 'Total Transactions', value: totalTransactions.toLocaleString(), change: 8.7, icon: ShoppingCart },
     { title: 'Average Growth', value: `${avgGrowth.toFixed(1)}%`, change: 2.3, icon: TrendingUp },
-    { title: 'Active Users', value: users.filter(u => u.active).length.toString(), change: 1.8, icon: Users },
+    { title: 'Active Users', value: teamMembers.filter(u => u.is_active).length.toString(), change: 1.8, icon: Users },
   ];
-
-  const handleCreateUser = () => {
-    if (!newUser.name || !newUser.email || !newUser.role || !newUser.password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const user: User = {
-      id: (users.length + 1).toString(),
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role as User['role'],
-      department: newUser.department as User['department'],
-      active: true
-    };
-
-    setUsers(prev => [...prev, user]);
-    setNewUser({ name: '', email: '', role: '', department: '', password: '' });
-    
-    toast({
-      title: "User Created",
-      description: `${user.name} has been created successfully`,
-    });
-  };
 
   const handleExpenseApprove = (expenseId: number) => {
     setExpenses(prev => 
@@ -265,8 +325,15 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
       case 'fuel': return 'bg-orange-100 text-orange-800';
       case 'supermarket': return 'bg-green-100 text-green-800';
       case 'restaurant': return 'bg-amber-100 text-amber-800';
+      case 'executive': return 'bg-purple-100 text-purple-800';
+      case 'management': return 'bg-blue-100 text-blue-800';
+      case 'accounting': return 'bg-emerald-100 text-emerald-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getRoleDisplayName = (role: string) => {
+    return role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const pendingExpenses = expenses.filter(expense => expense.status === 'manager_approved');
@@ -766,117 +833,166 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <UserPlus className="h-6 w-6" />
-                Create New User
+                <Users className="h-6 w-6" />
+                User Management & Administration
               </CardTitle>
+              <p className="text-sm text-gray-600">
+                Manage existing team members, their roles, and account status. Use Team Management tab to invite new members.
+              </p>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={newUser.name}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter full name"
-                  />
+              {loadingUsers ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading team members...</p>
                 </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="Enter email address"
-                  />
+              ) : teamMembers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teamMembers.map(member => (
+                      <TableRow key={member.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                              {member.full_name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <span className="font-medium">{member.full_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{member.email}</TableCell>
+                        <TableCell>
+                          <Select 
+                            value={member.role} 
+                            onValueChange={(value) => handleUpdateUserRole(member.id, value)}
+                            disabled={member.role === 'director'}
+                          >
+                            <SelectTrigger className="w-auto">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="director" disabled>Director</SelectItem>
+                              <SelectItem value="manager">Manager</SelectItem>
+                              <SelectItem value="accountant">Accountant</SelectItem>
+                              <SelectItem value="fuel_cashier">Fuel Cashier</SelectItem>
+                              <SelectItem value="supermarket_cashier">Supermarket Cashier</SelectItem>
+                              <SelectItem value="restaurant_cashier">Restaurant Cashier</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getDepartmentColor(member.department)}>
+                            {member.department.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge className={member.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                              {member.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                            {member.is_active ? (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-red-500" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {new Date(member.created_at || '').toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleUserStatus(member.id, member.is_active)}
+                              disabled={member.role === 'director'}
+                              className={`${member.is_active 
+                                ? 'text-red-600 border-red-300 hover:bg-red-50' 
+                                : 'text-green-600 border-green-300 hover:bg-green-50'
+                              }`}
+                            >
+                              {member.is_active ? (
+                                <>
+                                  <UserX className="w-4 h-4 mr-1" />
+                                  Deactivate
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-4 h-4 mr-1" />
+                                  Activate
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No team members found. Use Team Management to invite new members.</p>
                 </div>
-                <div>
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={newUser.role} onValueChange={(value) => setNewUser(prev => ({ ...prev, role: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="accountant">Accountant</SelectItem>
-                      <SelectItem value="fuel_cashier">Fuel Cashier</SelectItem>
-                      <SelectItem value="supermarket_cashier">Supermarket Cashier</SelectItem>
-                      <SelectItem value="restaurant_cashier">Restaurant Cashier</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="department">Department</Label>
-                  <Select value={newUser.department} onValueChange={(value) => setNewUser(prev => ({ ...prev, department: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="management">Management</SelectItem>
-                      <SelectItem value="accounting">Accounting</SelectItem>
-                      <SelectItem value="fuel">Fuel</SelectItem>
-                      <SelectItem value="supermarket">Supermarket</SelectItem>
-                      <SelectItem value="restaurant">Restaurant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Enter password"
-                  />
-                </div>
-              </div>
-              <Button onClick={handleCreateUser} className="mt-4 w-full">
-                Create User
-              </Button>
+              )}
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Existing Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map(user => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {user.role.replace('_', ' ').toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getDepartmentColor(user.department)}>
-                          {user.department.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                          {user.active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          {/* User Stats Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4 text-center">
+                <h4 className="font-semibold text-blue-800">Total Users</h4>
+                <p className="text-2xl font-bold text-blue-900">{teamMembers.length}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <h4 className="font-semibold text-green-800">Active Users</h4>
+                <p className="text-2xl font-bold text-green-900">
+                  {teamMembers.filter(u => u.is_active).length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <h4 className="font-semibold text-orange-800">Managers</h4>
+                <p className="text-2xl font-bold text-orange-900">
+                  {teamMembers.filter(u => u.role === 'manager').length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <h4 className="font-semibold text-purple-800">Cashiers</h4>
+                <p className="text-2xl font-bold text-purple-900">
+                  {teamMembers.filter(u => u.role.includes('cashier')).length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Admin Note */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <h4 className="font-semibold text-blue-800 mb-2">Admin Notes:</h4>
+              <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                <li>Directors cannot be deactivated or have their role changed</li>
+                <li>Role changes take effect immediately</li>
+                <li>Deactivated users cannot log in but their data is preserved</li>
+                <li>Use Team Management tab to invite new team members</li>
+              </ul>
             </CardContent>
           </Card>
         </TabsContent>
