@@ -35,6 +35,14 @@ const weeklyData = [
   { day: 'Sun', sales: 3100000 },
 ];
 
+const businessInfo = {
+  businessName: "DataCollectors Fuel Station",
+  address: "123 Main Street, Kampala, Uganda",
+  phone: "+256 700 123 456",
+  email: "info@datacollectors.com",
+  website: "www.datacollectors.com"
+};
+
 export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const [fuelTypes, setFuelTypes] = useState(initialFuelTypes);
   const [selectedFuel, setSelectedFuel] = useState('');
@@ -43,7 +51,7 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [pumpNumber, setPumpNumber] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
-  const [lastSaleData, setLastSaleData] = useState<any>(null);
+  const [lastReceiptData, setLastReceiptData] = useState<any>(null);
 
   const { createSale, isCreatingSale, sales, getSalesSummary } = useSales();
 
@@ -84,8 +92,9 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
     const tax = subtotal * 0.18;
     const total = subtotal + tax;
 
-    // Prepare receipt data
+    // Prepare receipt data in the correct format
     const receiptData = {
+      receiptNumber: `FU-${Date.now()}`,
       department: 'fuel',
       customerName: customerName || 'Walk-in Customer',
       items: [{
@@ -99,8 +108,9 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
       total,
       paymentMethod,
       pumpNumber,
-      amountReceived: total, // For fuel, typically exact amount
-      changeAmount: 0
+      amountReceived: total,
+      changeAmount: 0,
+      timestamp: new Date()
     };
 
     // Save to database using the sales hook
@@ -146,7 +156,7 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
     onSaleRecord(globalSale);
 
     // Store receipt data and show receipt
-    setLastSaleData(receiptData);
+    setLastReceiptData(receiptData);
     setShowReceipt(true);
     
     // Reset form
@@ -164,14 +174,16 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
 
   const handleReceiptClose = () => {
     setShowReceipt(false);
-    setLastSaleData(null);
+    setLastReceiptData(null);
   };
 
-  if (showReceipt && lastSaleData) {
+  if (showReceipt && lastReceiptData) {
     return (
       <ReceiptGenerator
-        saleData={lastSaleData}
-        onClose={handleReceiptClose}
+        receiptData={lastReceiptData}
+        businessInfo={businessInfo}
+        onPrint={handleReceiptClose}
+        onDownload={handleReceiptClose}
       />
     );
   }
