@@ -67,21 +67,45 @@ export const useReceipts = () => {
 
   const updateBusinessSettings = async (settings: BusinessSettings) => {
     try {
-      const { error } = await supabase
+      // First, check if any settings exist
+      const { data: existingSettings } = await supabase
         .from('business_settings')
-        .update({
-          business_name: settings.businessName,
-          address: settings.address,
-          phone: settings.phone,
-          email: settings.email,
-          website: settings.website,
-          updated_by: (await supabase.auth.getUser()).data.user?.id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', (await supabase.from('business_settings').select('id').single()).data?.id);
+        .select('id')
+        .single();
 
-      if (error) {
-        throw error;
+      const user = await supabase.auth.getUser();
+      const userId = user.data.user?.id;
+
+      if (existingSettings) {
+        // Update existing settings
+        const { error } = await supabase
+          .from('business_settings')
+          .update({
+            business_name: settings.businessName,
+            address: settings.address,
+            phone: settings.phone,
+            email: settings.email,
+            website: settings.website,
+            updated_by: userId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSettings.id);
+
+        if (error) throw error;
+      } else {
+        // Create new settings record
+        const { error } = await supabase
+          .from('business_settings')
+          .insert({
+            business_name: settings.businessName,
+            address: settings.address,
+            phone: settings.phone,
+            email: settings.email,
+            website: settings.website,
+            updated_by: userId
+          });
+
+        if (error) throw error;
       }
 
       setBusinessSettings(settings);
@@ -111,6 +135,7 @@ export const useReceipts = () => {
 
   const saveReceipt = async (receiptData: ReceiptData) => {
     try {
+      const user = await supabase.auth.getUser();
       const { error } = await supabase
         .from('receipts')
         .insert({
@@ -126,7 +151,7 @@ export const useReceipts = () => {
           change_amount: receiptData.changeAmount,
           table_number: receiptData.tableNumber,
           pump_number: receiptData.pumpNumber,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: user.data.user?.id
         });
 
       if (error) {

@@ -1,15 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Fuel, Building2, Calendar, Clock, User, Receipt as ReceiptIcon } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface BusinessSettings {
-  businessName: string;
-  address: string;
-  phone: string;
-  email: string;
-  website: string;
-}
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 
 interface ReceiptProps {
   receiptData: {
@@ -35,43 +27,7 @@ interface ReceiptProps {
 }
 
 export const Receipt: React.FC<ReceiptProps> = ({ receiptData }) => {
-  const [businessSettings, setBusinessSettings] = useState<BusinessSettings>({
-    businessName: 'HIPEMART OILS',
-    address: 'BUKHALIHA ROAD, BUSIA',
-    phone: '+256 776 429450',
-    email: 'info@hipemartoils.com',
-    website: 'www.hipemartoils.com'
-  });
-
-  useEffect(() => {
-    fetchBusinessSettings();
-  }, []);
-
-  const fetchBusinessSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('business_settings')
-        .select('*')
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching business settings:', error);
-        return;
-      }
-
-      if (data) {
-        setBusinessSettings({
-          businessName: data.business_name,
-          address: data.address,
-          phone: data.phone,
-          email: data.email || '',
-          website: data.website || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching business settings:', error);
-    }
-  };
+  const { businessSettings, loading } = useBusinessSettings();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-UG', {
@@ -91,6 +47,10 @@ export const Receipt: React.FC<ReceiptProps> = ({ receiptData }) => {
   };
 
   const dateTime = formatDateTime(receiptData.timestamp);
+
+  if (loading) {
+    return <div className="bg-white p-6 max-w-sm mx-auto">Loading...</div>;
+  }
 
   return (
     <div className="bg-white p-6 max-w-sm mx-auto font-mono text-sm shadow-lg border rounded-lg">

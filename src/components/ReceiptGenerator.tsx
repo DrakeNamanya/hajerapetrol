@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Printer, Download } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 
 interface ReceiptItem {
   name: string;
@@ -28,68 +28,18 @@ interface ReceiptData {
   timestamp: Date;
 }
 
-interface BusinessInfo {
-  businessName: string;
-  address: string;
-  phone: string;
-  email: string;
-  website: string;
-}
-
 interface ReceiptGeneratorProps {
   receiptData: ReceiptData;
-  businessInfo?: BusinessInfo;
   onPrint?: () => void;
   onDownload?: () => void;
 }
 
 export const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({
   receiptData,
-  businessInfo: propBusinessInfo,
   onPrint,
   onDownload
 }) => {
-  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(
-    propBusinessInfo || {
-      businessName: 'HIPEMART OILS',
-      address: 'BUKHALIHA ROAD, BUSIA',
-      phone: '+256 776 429450',
-      email: 'info@hipemartoils.com',
-      website: 'www.hipemartoils.com'
-    }
-  );
-
-  useEffect(() => {
-    if (!propBusinessInfo) {
-      fetchBusinessSettings();
-    }
-  }, [propBusinessInfo]);
-
-  const fetchBusinessSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('business_settings')
-        .select('*')
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching business settings:', error);
-        return;
-      }
-
-      if (data) {
-        setBusinessInfo({
-          businessName: data.business_name,
-          address: data.address,
-          phone: data.phone,
-          email: data.email || '',
-          website: data.website || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching business settings:', error);
-    }
-  };
+  const { businessSettings, loading } = useBusinessSettings();
 
   const handlePrint = () => {
     window.print();
@@ -111,6 +61,10 @@ export const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({
     onDownload?.();
   };
 
+  if (loading) {
+    return <div className="space-y-4">Loading business settings...</div>;
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2 print:hidden">
@@ -127,11 +81,11 @@ export const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({
       <Card className="max-w-md mx-auto print:shadow-none print:border-none">
         <CardContent className="p-6" id="receipt-content">
           <div className="text-center space-y-2 border-b pb-4">
-            <h1 className="text-xl font-bold">{businessInfo.businessName}</h1>
-            <p className="text-sm text-gray-600">{businessInfo.address}</p>
-            <p className="text-sm text-gray-600">Tel: {businessInfo.phone}</p>
-            <p className="text-sm text-gray-600">{businessInfo.email}</p>
-            <p className="text-sm text-gray-600">{businessInfo.website}</p>
+            <h1 className="text-xl font-bold">{businessSettings.businessName}</h1>
+            <p className="text-sm text-gray-600">{businessSettings.address}</p>
+            <p className="text-sm text-gray-600">Tel: {businessSettings.phone}</p>
+            <p className="text-sm text-gray-600">{businessSettings.email}</p>
+            <p className="text-sm text-gray-600">{businessSettings.website}</p>
           </div>
 
           <div className="py-4 border-b space-y-1">
