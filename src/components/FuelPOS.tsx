@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Fuel, TrendingUp, Database, Receipt } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useSales, type SaleItem } from '@/hooks/useSales';
 import { ReceiptGenerator } from './ReceiptGenerator';
 
@@ -291,21 +290,19 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
             }}
             className="h-[300px]"
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="sales" 
-                  stroke="#f97316" 
-                  strokeWidth={2}
-                  dot={{ fill: "#f97316" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <LineChart data={weeklyData} width="100%" height={300}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Line 
+                type="monotone" 
+                dataKey="sales" 
+                stroke="#f97316" 
+                strokeWidth={2}
+                dot={{ fill: "#f97316" }}
+              />
+            </LineChart>
           </ChartContainer>
         </CardContent>
       </Card>
