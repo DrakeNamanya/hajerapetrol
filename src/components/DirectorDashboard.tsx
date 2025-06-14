@@ -59,6 +59,9 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
   const [timeFilter, setTimeFilter] = useState('month');
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [expenses, setExpenses] = useState<any[]>([]);
+  const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const [businessSettings, setBusinessSettings] = useState<BusinessSettings>({
     name: 'HIPEMART OILS',
@@ -68,34 +71,58 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     website: 'www.hipemartoils.com'
   });
 
-  // Mock expenses from manager
-  const [expenses, setExpenses] = useState<Expense[]>([
-    {
-      id: 1,
-      category: 'Equipment Maintenance',
-      amount: 350000,
-      description: 'Fuel pump maintenance and calibration',
-      department: 'Fuel',
-      requestedBy: 'John Manager',
-      timestamp: new Date(),
-      status: 'manager_approved'
-    },
-    {
-      id: 2,
-      category: 'Marketing Campaign',
-      amount: 500000,
-      description: 'Local radio advertisement campaign',
-      department: 'All',
-      requestedBy: 'John Manager',
-      timestamp: new Date(),
-      status: 'manager_approved'
-    }
-  ]);
-
-  // Fetch real team members from Supabase
   useEffect(() => {
     fetchTeamMembers();
+    fetchExpenses();
+    getCurrentUser();
   }, []);
+
+  const getCurrentUser = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('Error getting user:', error);
+        return;
+      }
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error in getCurrentUser:', error);
+    }
+  };
+
+  const fetchExpenses = async () => {
+    try {
+      setLoadingExpenses(true);
+      console.log('Fetching expenses from Supabase...');
+      
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('status', 'manager_approved')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching expenses:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load expenses",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Expenses fetched:', data);
+        setExpenses(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchExpenses:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load expenses",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingExpenses(false);
+    }
+  };
 
   const fetchTeamMembers = async () => {
     try {
@@ -229,7 +256,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     });
   }, [sales]);
 
-  // Calculate Profit & Loss Statement data
+  // Calculate Profit & Loss Statement data using real expenses
   const profitLossData = React.useMemo(() => {
     // Revenue by department from actual sales
     const revenueByDept = {
@@ -238,12 +265,12 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
       restaurant: sales.filter(s => s.department === 'restaurant').reduce((sum, sale) => sum + sale.total, 0)
     };
 
-    // Expenses by department from actual expenses data
+    // Expenses by department from real expenses data
     const expensesByDept = {
-      fuel: expenses.filter(e => e.department.toLowerCase() === 'fuel' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0),
-      supermarket: expenses.filter(e => e.department.toLowerCase() === 'supermarket' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0),
-      restaurant: expenses.filter(e => e.department.toLowerCase() === 'restaurant' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0),
-      all: expenses.filter(e => e.department.toLowerCase() === 'all' && e.status === 'director_approved').reduce((sum, exp) => sum + exp.amount, 0)
+      fuel: expenses.filter(e => e.department?.toLowerCase() === 'fuel' && e.status === 'director_approved').reduce((sum, exp) => sum + Number(exp.amount), 0),
+      supermarket: expenses.filter(e => e.department?.toLowerCase() === 'supermarket' && e.status === 'director_approved').reduce((sum, exp) => sum + Number(exp.amount), 0),
+      restaurant: expenses.filter(e => e.department?.toLowerCase() === 'restaurant' && e.status === 'director_approved').reduce((sum, exp) => sum + Number(exp.amount), 0),
+      all: expenses.filter(e => e.department?.toLowerCase() === 'all' && e.status === 'director_approved').reduce((sum, exp) => sum + Number(exp.amount), 0)
     };
 
     const totalRevenue = Object.values(revenueByDept).reduce((sum, rev) => sum + rev, 0);
@@ -276,33 +303,76 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
     { title: 'Active Users', value: teamMembers.filter(u => u.is_active).length.toString(), change: 1.8, icon: Users },
   ];
 
-  const handleExpenseApprove = (expenseId: number) => {
-    setExpenses(prev => 
-      prev.map(expense => 
-        expense.id === expenseId 
-          ? { ...expense, status: 'director_approved' as const }
-          : expense
-      )
-    );
-    toast({
-      title: "Expense Approved",
-      description: "Expense has been approved for payment",
-    });
+  const handleExpenseApprove = async (expenseId: string) => {
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to approve expenses",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          status: 'director_approved',
+          approved_by_director: currentUser.id,
+          director_approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', expenseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Expense Approved",
+        description: "Expense has been approved for payment",
+      });
+
+      fetchExpenses(); // Refresh the data
+    } catch (error) {
+      console.error('Error approving expense:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve expense",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleExpenseReject = (expenseId: number) => {
-    setExpenses(prev => 
-      prev.map(expense => 
-        expense.id === expenseId 
-          ? { ...expense, status: 'rejected' as const }
-          : expense
-      )
-    );
-    toast({
-      title: "Expense Rejected",
-      description: "Expense has been rejected",
-      variant: "destructive"
-    });
+  const handleExpenseReject = async (expenseId: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          status: 'rejected',
+          rejection_reason: reason,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', expenseId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Expense Rejected",
+        description: "Expense has been rejected",
+        variant: "destructive"
+      });
+
+      fetchExpenses(); // Refresh the data
+    } catch (error) {
+      console.error('Error rejecting expense:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject expense",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleBusinessSettingsUpdate = () => {
@@ -685,27 +755,31 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {pendingExpenses.length > 0 ? (
+              {loadingExpenses ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading expenses...</p>
+                </div>
+              ) : pendingExpenses.length > 0 ? (
                 <div className="space-y-4">
                   {pendingExpenses.map(expense => (
                     <div key={expense.id} className="border rounded-lg p-4 bg-gray-50">
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-lg">{expense.category}</h4>
+                            <h4 className="font-semibold text-lg">{expense.type}</h4>
                             <Badge className={getDepartmentColor(expense.department)}>
-                              {expense.department.toUpperCase()}
+                              {expense.department?.toUpperCase()}
                             </Badge>
                           </div>
                           <p className="text-gray-700 mb-2">{expense.description}</p>
                           <div className="text-sm text-gray-600">
-                            <p>Approved by: {expense.requestedBy}</p>
-                            <p>Date: {expense.timestamp.toLocaleDateString()}</p>
+                            <p>Date: {new Date(expense.created_at).toLocaleDateString()}</p>
                           </div>
                         </div>
                         <div className="text-right ml-4">
                           <div className="text-2xl font-bold text-red-600">
-                            UGX {expense.amount.toLocaleString()}
+                            UGX {Number(expense.amount).toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -729,7 +803,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-600 text-center py-8">No pending expense approvals</p>
+                <p className="text-gray-600 text-center py-8">No pending expense approvals from manager</p>
               )}
             </CardContent>
           </Card>
@@ -744,11 +818,11 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
                   {approvedExpenses.map(expense => (
                     <div key={expense.id} className="flex justify-between items-center border-b pb-2">
                       <div>
-                        <span className="font-medium">{expense.category}</span>
+                        <span className="font-medium">{expense.type}</span>
                         <span className="text-sm text-gray-600 ml-2">({expense.department})</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold">UGX {expense.amount.toLocaleString()}</div>
+                        <div className="font-semibold">UGX {Number(expense.amount).toLocaleString()}</div>
                         <Badge className="bg-green-100 text-green-800">Payment Approved</Badge>
                       </div>
                     </div>

@@ -72,6 +72,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
 
   const fetchExpenses = async () => {
     try {
+      console.log('Fetching expenses for manager approval...');
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
@@ -79,6 +80,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      console.log('Manager expenses fetched:', data);
       setExpenses(data || []);
     } catch (error) {
       console.error('Error fetching expenses:', error);
@@ -380,7 +383,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                           <div className="flex items-center gap-2 mb-2">
                             <h4 className="font-semibold text-lg">{expense.type}</h4>
                             <Badge className={getDepartmentColor(expense.department)}>
-                              {expense.department.toUpperCase()}
+                              {expense.department?.toUpperCase()}
                             </Badge>
                           </div>
                           <p className="text-gray-700 mb-2">{expense.description}</p>
@@ -390,7 +393,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                         </div>
                         <div className="text-right ml-4">
                           <div className="text-2xl font-bold text-red-600">
-                            UGX {expense.amount.toLocaleString()}
+                            UGX {Number(expense.amount).toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -435,7 +438,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
                         <span className="text-sm text-gray-600 ml-2">({expense.department})</span>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold">UGX {expense.amount.toLocaleString()}</div>
+                        <div className="font-semibold">UGX {Number(expense.amount).toLocaleString()}</div>
                         <Badge className="bg-blue-100 text-blue-800">Awaiting Director</Badge>
                       </div>
                     </div>
