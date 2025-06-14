@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,8 +40,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearError = () => setError(null);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, retryCount = 0) => {
     try {
+      console.log(`Fetching profile for user: ${userId}, attempt: ${retryCount + 1}`);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -49,10 +52,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Error fetching profile:', error);
+        
+        // If profile doesn't exist and this is a new signup, wait and retry
+        if (error.code === 'PGRST116' && retryCount < 3) {
+          console.log('Profile not found, retrying in 1 second...');
+          setTimeout(() => {
+            fetchUserProfile(userId, retryCount + 1);
+          }, 1000);
+          return;
+        }
+        
         setError('Failed to load user profile');
         return;
       }
 
+      console.log('Profile fetched successfully:', data);
       setProfile(data);
       setError(null);
     } catch (error) {
@@ -90,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (mounted) {
                   fetchUserProfile(session.user.id);
                 }
-              }, 0);
+              }, 100); // Slightly longer delay for new signups
             }
             break;
             
@@ -229,10 +243,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         setError(error.message);
       } else if (data.user) {
-        // Force page reload for clean state
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 100);
+        // Don't force reload immediately, let the auth state change handler manage it
+        console.log('Sign in successful, waiting for profile...');
       }
       
       return { error };

@@ -10,13 +10,28 @@ import { Fuel, Building2, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthPage: React.FC = () => {
-  const { signUp, signIn, error, clearError, loading } = useAuth();
+  const { signUp, signIn, error, clearError, loading, user, profile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [localError, setLocalError] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
   const [message, setMessage] = useState('');
+
+  // If user is authenticated but profile is still loading, show loading state
+  if (user && !profile && !error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
+        <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
+            <p className="text-gray-600">Please wait while we prepare your dashboard.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Clear errors when switching tabs or changing input
   const handleClearErrors = () => {
