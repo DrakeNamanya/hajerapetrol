@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Users, Mail, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { UserPlus, Users, Mail, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
@@ -82,9 +82,11 @@ export const TeamManagement: React.FC = () => {
       return;
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check if email is already invited or registered
-    const existingInvitation = invitations.find(inv => inv.email.toLowerCase() === email.toLowerCase());
-    const existingMember = teamMembers.find(member => member.email.toLowerCase() === email.toLowerCase());
+    const existingInvitation = invitations.find(inv => inv.email.toLowerCase() === normalizedEmail);
+    const existingMember = teamMembers.find(member => member.email.toLowerCase() === normalizedEmail);
     
     if (existingInvitation) {
       setError('This email already has a pending invitation');
@@ -102,7 +104,7 @@ export const TeamManagement: React.FC = () => {
 
     try {
       console.log('Inserting invitation:', {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         role,
         department,
         invited_by: user.id
@@ -111,7 +113,7 @@ export const TeamManagement: React.FC = () => {
       const { data, error: inviteError } = await supabase
         .from('team_invitations')
         .insert({
-          email: email.toLowerCase().trim(),
+          email: normalizedEmail,
           role: role as any,
           department: department as any,
           invited_by: user.id
@@ -188,25 +190,6 @@ export const TeamManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Debug Info */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-blue-800">
-            <AlertCircle className="w-5 h-5" />
-            Debug Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-blue-700 space-y-2">
-            <p><strong>Current User ID:</strong> {user?.id}</p>
-            <p><strong>Current User Email:</strong> {user?.email}</p>
-            <p><strong>Profile Role:</strong> {profile?.role}</p>
-            <p><strong>Total Team Members:</strong> {teamMembers.length}</p>
-            <p><strong>Pending Invitations:</strong> {invitations.length}</p>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Invite New Team Member */}
       <Card>
         <CardHeader>
