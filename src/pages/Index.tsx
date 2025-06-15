@@ -1,4 +1,3 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,10 +19,29 @@ import { useSales } from '@/hooks/useSales';
 import { useAuth as useAuthOperations } from '@/contexts/AuthContext';
 import { RealtimeNotifications } from '@/components/RealtimeNotifications';
 
+// Transform database sales data to match the expected Sale interface
+const transformSalesData = (dbSales: any[]) => {
+  return dbSales.map(sale => ({
+    id: sale.id,
+    department: sale.department,
+    type: sale.sale_type,
+    customer: sale.customer_name || 'Unknown Customer',
+    items: sale.items,
+    total: sale.total,
+    paymentMethod: sale.payment_method,
+    timestamp: new Date(sale.created_at),
+    status: sale.status,
+    tableNumber: sale.table_number
+  }));
+};
+
 const Index = () => {
   const { user, profile, loading } = useAuth();
-  const { sales, error: salesError } = useSales();
+  const { sales: rawSales, error: salesError } = useSales();
   const { signOut } = useAuthOperations();
+
+  // Transform the sales data to match expected interface
+  const sales = rawSales ? transformSalesData(rawSales) : [];
 
   if (loading) {
     return (
@@ -95,7 +113,7 @@ const Index = () => {
             <TabsTrigger value="approvals">Sales Approvals</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
-            <DirectorDashboard sales={sales || []} />
+            <DirectorDashboard sales={sales} />
           </TabsContent>
           <TabsContent value="analytics">
             <SalesAnalytics />
@@ -130,7 +148,7 @@ const Index = () => {
             <TabsTrigger value="team">Team</TabsTrigger>
           </TabsList>
           <TabsContent value="management">
-            <ManagerDashboard sales={sales || []} onApprove={handleSaleApproval} />
+            <ManagerDashboard sales={sales} onApprove={handleSaleApproval} />
           </TabsContent>
           <TabsContent value="analytics">
             <SalesAnalytics />
