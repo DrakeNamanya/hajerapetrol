@@ -21,29 +21,82 @@ export const useProfileManager = () => {
       if (error) {
         console.error('Profile fetch error:', error);
         
-        // If profile doesn't exist and we haven't exceeded retry limit
-        if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log('Profile not found, retrying in 2 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          return fetchUserProfile(userId, retryCount + 1);
-        }
-        
-        // After retries, check if this user has a pending invitation
-        console.log('Checking for pending invitations...');
-        const { data: invitationData, error: invitationError } = await supabase
-          .from('team_invitations')
-          .select('*')
-          .eq('email', (await supabase.auth.getUser()).data.user?.email)
-          .is('accepted_at', null)
-          .gt('expires_at', new Date().toISOString())
-          .single();
+        // If profile doesn't exist, check if this is the first user (should become director)
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found, checking if this should be the first director...');
+          
+          // Check if there are any existing directors
+          const { data: existingDirectors, error: directorError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('role', 'director')
+            .limit(1);
 
-        if (!invitationError && invitationData) {
-          console.log('Found pending invitation, user needs to complete setup');
-          setError('Account setup incomplete. Please contact an administrator for proper invitation.');
+          if (!directorError && (!existingDirectors || existingDirectors.length === 0)) {
+            console.log('No directors found, this user should become the first director');
+            
+            // Get the current user's email
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user?.email) {
+              console.log('Creating director profile for:', user.email);
+              
+              // Create director profile
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: userId,
+                  email: user.email,
+                  full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+                  role: 'director',
+                  department: 'executive'
+                })
+                .select()
+                .single();
+
+              if (createError) {
+                console.error('Failed to create director profile:', createError);
+                setError('Failed to create user profile. Please contact support.');
+                setLoading(false);
+                return false;
+              }
+
+              console.log('Director profile created successfully:', newProfile);
+              setProfile(newProfile);
+              setError(null);
+              setLoading(false);
+              return true;
+            }
+          }
+          
+          // If we reach here and retries are available, try again
+          if (retryCount < 3) {
+            console.log('Profile not found, retrying in 2 seconds...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            return fetchUserProfile(userId, retryCount + 1);
+          }
+          
+          // After retries, check for pending invitations
+          console.log('Checking for pending invitations...');
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.email) {
+            const { data: invitationData, error: invitationError } = await supabase
+              .from('team_invitations')
+              .select('*')
+              .eq('email', user.email)
+              .is('accepted_at', null)
+              .gt('expires_at', new Date().toISOString())
+              .single();
+
+            if (!invitationError && invitationData) {
+              console.log('Found pending invitation, user needs to complete setup');
+              setError('Account setup incomplete. Please contact an administrator for proper invitation.');
+            } else {
+              console.log('No profile found and no pending invitation - unauthorized user');
+              setError('Account not authorized. Please contact an administrator to get invited to the system.');
+            }
+          }
         } else {
-          console.log('No profile found and no pending invitation - unauthorized user');
-          setError('Account not authorized. Please contact an administrator to get invited to the system.');
+          setError('Failed to load user profile. Please try again.');
         }
         
         setLoading(false);

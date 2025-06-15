@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fuel, Building2, Mail, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Fuel, Building2, Mail, AlertCircle, CheckCircle, RefreshCw, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthPage: React.FC = () => {
@@ -90,10 +91,20 @@ export const AuthPage: React.FC = () => {
               </Button>
             </div>
             {isUnauthorized && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  <strong>Need access?</strong> Contact your system administrator to send you an invitation to join the team.
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <p className="text-sm font-medium text-blue-700">Need access?</p>
+                </div>
+                <p className="text-sm text-blue-600">
+                  Contact your system administrator to send you an invitation to join the team. 
+                  You must be invited by a director to access this system.
                 </p>
+                <div className="mt-3 p-2 bg-amber-50 rounded border border-amber-200">
+                  <p className="text-xs text-amber-700">
+                    <strong>Note:</strong> If you're the first user of this system, try refreshing the page as you should automatically become the director.
+                  </p>
+                </div>
               </div>
             )}
           </CardContent>
@@ -331,9 +342,9 @@ export const AuthPage: React.FC = () => {
               <div className="text-xs text-gray-500 mt-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Mail className="w-4 h-4" />
-                  <span>You need an invitation to join this system</span>
+                  <span>Invitation required for team access</span>
                 </div>
-                <p>Contact an administrator to get invited to the team</p>
+                <p>Contact an administrator to get invited, or be the first user to become director</p>
               </div>
             </TabsContent>
           </Tabs>
