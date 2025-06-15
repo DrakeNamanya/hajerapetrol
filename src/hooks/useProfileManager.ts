@@ -21,78 +21,60 @@ export const useProfileManager = () => {
       if (error) {
         console.error('Profile fetch error:', error);
         
-        // If profile doesn't exist, check if this is the first user (should become director)
+        // If profile doesn't exist (user hasn't confirmed email or not invited)
         if (error.code === 'PGRST116') {
-          console.log('Profile not found, checking if this should be the first director...');
+          console.log('Profile not found for user:', userId);
           
-          // Check if there are any existing directors
-          const { data: existingDirectors, error: directorError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('role', 'director')
-            .limit(1);
-
-          if (!directorError && (!existingDirectors || existingDirectors.length === 0)) {
-            console.log('No directors found, this user should become the first director');
+          // Get current user to check email confirmation status
+          const { data: { user } } = await supabase.auth.getUser();
+          
+          if (user) {
+            if (!user.email_confirmed_at) {
+              console.log('User email not confirmed yet');
+              setError('Please check your email and click the confirmation link to complete your registration.');
+              setLoading(false);
+              return false;
+            }
             
-            // Get the current user's email
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user?.email) {
-              console.log('Creating director profile for:', user.email);
-              
-              // Create director profile
-              const { data: newProfile, error: createError } = await supabase
-                .from('profiles')
-                .insert({
-                  id: userId,
-                  email: user.email,
-                  full_name: user.user_metadata?.full_name || user.email.split('@')[0],
-                  role: 'director',
-                  department: 'executive'
-                })
-                .select()
+            // Email is confirmed but no profile exists
+            // Check if there are any directors (first user case)
+            const { data: existingDirectors, error: directorError } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('role', 'director')
+              .limit(1);
+
+            if (!directorError && (!existingDirectors || existingDirectors.length === 0)) {
+              console.log('No directors found, this should be the first director');
+              // Trigger a retry as the database trigger should have created the profile
+              if (retryCount < 5) {
+                console.log('Retrying profile fetch for first director...');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return fetchUserProfile(userId, retryCount + 1);
+              }
+              setError('Unable to create director profile. Please contact support.');
+            } else {
+              // Check for pending invitations
+              const { data: invitationData, error: invitationError } = await supabase
+                .from('team_invitations')
+                .select('*')
+                .eq('email', user.email)
+                .is('accepted_at', null)
+                .gt('expires_at', new Date().toISOString())
                 .single();
 
-              if (createError) {
-                console.error('Failed to create director profile:', createError);
-                setError('Failed to create user profile. Please contact support.');
-                setLoading(false);
-                return false;
+              if (!invitationError && invitationData) {
+                console.log('Found pending invitation, profile should be created');
+                // Retry as the trigger should have processed the invitation
+                if (retryCount < 3) {
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  return fetchUserProfile(userId, retryCount + 1);
+                }
+                setError('Account setup incomplete. Please contact an administrator.');
+              } else {
+                console.log('No invitation found for confirmed user');
+                setError('Account not authorized. Please contact an administrator to get invited to the system.');
               }
-
-              console.log('Director profile created successfully:', newProfile);
-              setProfile(newProfile);
-              setError(null);
-              setLoading(false);
-              return true;
-            }
-          }
-          
-          // If we reach here and retries are available, try again
-          if (retryCount < 3) {
-            console.log('Profile not found, retrying in 2 seconds...');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            return fetchUserProfile(userId, retryCount + 1);
-          }
-          
-          // After retries, check for pending invitations
-          console.log('Checking for pending invitations...');
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user?.email) {
-            const { data: invitationData, error: invitationError } = await supabase
-              .from('team_invitations')
-              .select('*')
-              .eq('email', user.email)
-              .is('accepted_at', null)
-              .gt('expires_at', new Date().toISOString())
-              .single();
-
-            if (!invitationError && invitationData) {
-              console.log('Found pending invitation, user needs to complete setup');
-              setError('Account setup incomplete. Please contact an administrator for proper invitation.');
-            } else {
-              console.log('No profile found and no pending invitation - unauthorized user');
-              setError('Account not authorized. Please contact an administrator to get invited to the system.');
             }
           }
         } else {

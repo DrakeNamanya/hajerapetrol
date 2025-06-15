@@ -2,9 +2,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface InvitationEmailRequest {
@@ -22,100 +25,64 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('Edge function started');
-    
-    // Use the API key directly for now
-    const apiKey = "re_7BNBJN1e_ETaUfmqz2oTJU88eTSZAF11c";
-    console.log('Using API key');
-
-    const resend = new Resend(apiKey);
-
     const { email, role, department, inviterName, businessName }: InvitationEmailRequest = await req.json();
 
     console.log('Sending invitation email to:', email);
 
-    const roleDisplay = role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    const departmentDisplay = department.charAt(0).toUpperCase() + department.slice(1);
-
-    // Get the application URL - you can customize this based on your deployment
-    const appUrl = "https://id-preview--f49e1457-bccf-4906-b3ff-cde5c8c01dc1.lovable.app";
-
     const emailResponse = await resend.emails.send({
-      from: `${businessName} <onboarding@resend.dev>`,
+      from: "HIPEMART OILS <noreply@datacollectorslimited.com>",
       to: [email],
-      subject: `You're invited to join ${businessName} team!`,
+      subject: `Invitation to join ${businessName} POS System`,
       html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Team Invitation</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
-            .button { display: inline-block; background: #667eea; color: white; text-decoration: none; padding: 12px 30px; border-radius: 5px; margin: 20px 0; font-weight: bold; }
-            .button:hover { background: #5a6fd8; }
-            .info-box { background: white; padding: 20px; border-radius: 5px; border-left: 4px solid #667eea; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            .cta-section { text-align: center; margin: 30px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎉 You're Invited!</h1>
-              <p>Join the ${businessName} team</p>
-            </div>
-            <div class="content">
-              <p>Hello!</p>
-              
-              <p><strong>${inviterName}</strong> has invited you to join <strong>${businessName}</strong> as a <strong>${roleDisplay}</strong> in the <strong>${departmentDisplay}</strong> department.</p>
-              
-              <div class="info-box">
-                <h3>Your Role Details:</h3>
-                <ul>
-                  <li><strong>Position:</strong> ${roleDisplay}</li>
-                  <li><strong>Department:</strong> ${departmentDisplay}</li>
-                  <li><strong>Company:</strong> ${businessName}</li>
-                </ul>
-              </div>
-              
-              <div class="cta-section">
-                <p><strong>Ready to get started?</strong></p>
-                <a href="${appUrl}" class="button">Join ${businessName} Team</a>
-                <p><small>Click the button above to access the registration page</small></p>
-              </div>
-              
-              <p>To accept this invitation and create your account:</p>
-              
-              <ol>
-                <li>Click the "Join ${businessName} Team" button above, or visit: <br><a href="${appUrl}">${appUrl}</a></li>
-                <li>Click "Sign Up" and use <strong>this exact email address</strong>: <code>${email}</code></li>
-                <li>Complete the registration process</li>
-                <li>You'll automatically be assigned your role and department</li>
-              </ol>
-              
-              <p><strong>Important:</strong> You must sign up using the email address <code>${email}</code> to be automatically assigned your role.</p>
-              
-              <div class="info-box">
-                <p><strong>⏰ This invitation expires in 7 days.</strong></p>
-                <p>If you don't sign up within 7 days, please contact ${inviterName} for a new invitation.</p>
-              </div>
-              
-              <p>We're excited to have you join our team!</p>
-              
-              <p>Best regards,<br>
-              The ${businessName} Team</p>
-            </div>
-            <div class="footer">
-              <p>This is an automated invitation email from ${businessName}.</p>
-              <p>If you have trouble with the button above, copy and paste this link: ${appUrl}</p>
-            </div>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+          <div style="background: linear-gradient(135deg, #f97316 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">${businessName}</h1>
+            <p style="color: white; margin: 10px 0 0 0; font-size: 16px;">BUKHALIHA ROAD, BUSIA</p>
           </div>
-        </body>
-        </html>
+          
+          <div style="background: white; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e5e5e5;">
+            <h2 style="color: #1f2937; margin-bottom: 20px;">You're Invited to Join Our Team!</h2>
+            
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+              Hello! <strong>${inviterName}</strong> has invited you to join the <strong>${businessName}</strong> Multi-Department POS System.
+            </p>
+            
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #1f2937; margin: 0 0 10px 0;">Your Role Assignment:</h3>
+              <p style="margin: 5px 0; color: #4b5563;"><strong>Role:</strong> ${role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+              <p style="margin: 5px 0; color: #4b5563;"><strong>Department:</strong> ${department.charAt(0).toUpperCase() + department.slice(1)}</p>
+            </div>
+            
+            <h3 style="color: #1f2937; margin: 25px 0 15px 0;">📋 Getting Started Instructions:</h3>
+            <ol style="color: #4b5563; line-height: 1.8; padding-left: 20px;">
+              <li><strong>Visit the signup page</strong> - Go to the POS system website</li>
+              <li><strong>Use this exact email</strong> - Sign up using: <code style="background: #fef3c7; padding: 2px 6px; border-radius: 4px; color: #92400e;">${email}</code></li>
+              <li><strong>Create your password</strong> - Choose a secure password (minimum 6 characters)</li>
+              <li><strong>Confirm your email</strong> - Check your inbox for the confirmation link</li>
+              <li><strong>Access granted</strong> - Once confirmed, you'll automatically receive your assigned role</li>
+            </ol>
+            
+            <div style="background: #dbeafe; border: 1px solid #3b82f6; padding: 15px; border-radius: 8px; margin: 25px 0;">
+              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                <strong>⚠️ Important:</strong> You must use the exact email address <strong>${email}</strong> when signing up. Using a different email will not grant you access to the system.
+              </p>
+            </div>
+            
+            <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 25px 0;">
+              <p style="margin: 0; color: #92400e; font-size: 14px;">
+                <strong>⏰ Expiry Notice:</strong> This invitation expires in 7 days. Please complete your registration within this timeframe.
+              </p>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px; margin-top: 30px; border-top: 1px solid #e5e5e5; padding-top: 20px;">
+              If you have any questions or issues with the signup process, please contact the system administrator.
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;">
+            <p>Powered by <strong>DATACOLLECTORS LTD</strong> | 0701634653</p>
+          </div>
+        </div>
       `,
     });
 
@@ -123,7 +90,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      messageId: emailResponse.data?.id 
+      message: "Invitation email sent successfully",
+      data: emailResponse 
     }), {
       status: 200,
       headers: {
@@ -132,10 +100,10 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
   } catch (error: any) {
-    console.error("Error sending invitation email:", error);
+    console.error("Error in send-invitation function:", error);
     return new Response(
       JSON.stringify({ 
-        success: false, 
+        success: false,
         error: error.message 
       }),
       {

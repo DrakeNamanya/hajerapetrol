@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fuel, Building2, Mail, AlertCircle, CheckCircle, RefreshCw, Users } from 'lucide-react';
+import { Fuel, Building2, Mail, AlertCircle, CheckCircle, RefreshCw, Users, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthPage: React.FC = () => {
@@ -24,7 +24,7 @@ export const AuthPage: React.FC = () => {
     if (user && !profile && !error) {
       const timeout = setTimeout(() => {
         setSetupTimeout(true);
-      }, 10000); // Reduced to 10 seconds for faster feedback
+      }, 15000); // Extended to 15 seconds for email confirmation
 
       return () => clearTimeout(timeout);
     } else {
@@ -50,6 +50,7 @@ export const AuthPage: React.FC = () => {
 
   // Handle setup timeout or account issues
   if (user && (!profile || setupTimeout) && (error || setupTimeout)) {
+    const isEmailUnconfirmed = error?.includes('check your email') || error?.includes('confirmation link');
     const isUnauthorized = error?.includes('not authorized') || error?.includes('contact an administrator');
     const isIncomplete = error?.includes('setup incomplete') || setupTimeout;
     
@@ -57,55 +58,99 @@ export const AuthPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
         <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
           <CardContent className="p-8 text-center">
-            <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2 text-amber-600">
-              {isUnauthorized ? 'Account Not Authorized' : 'Account Setup Issue'}
-            </h2>
-            <p className="text-gray-600 mb-4">
-              {isUnauthorized 
-                ? 'Your account is not authorized to access this system. Please contact an administrator to get invited to the team.'
-                : isIncomplete
-                ? 'Your account setup is incomplete. You may need a proper invitation from an administrator.'
-                : 'There was an issue setting up your account.'
-              }
-            </p>
-            <div className="space-y-3">
-              <Button 
-                onClick={() => {
-                  clearError();
-                  refreshProfile();
-                }} 
-                variant="outline"
-                className="w-full flex items-center gap-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Try Again
-              </Button>
-              <Button 
-                onClick={async () => {
-                  await signOut();
-                }}
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
-              >
-                Back to Login
-              </Button>
-            </div>
-            {isUnauthorized && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <p className="text-sm font-medium text-blue-700">Need access?</p>
-                </div>
-                <p className="text-sm text-blue-600">
-                  Contact your system administrator to send you an invitation to join the team. 
-                  You must be invited by a director to access this system.
+            {isEmailUnconfirmed ? (
+              <>
+                <Mail className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2 text-blue-600">
+                  Please Confirm Your Email
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  We've sent a confirmation link to your email address. Please check your email and click the link to complete your registration.
                 </p>
-                <div className="mt-3 p-2 bg-amber-50 rounded border border-amber-200">
-                  <p className="text-xs text-amber-700">
-                    <strong>Note:</strong> If you're the first user of this system, try refreshing the page as you should automatically become the director.
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => {
+                      clearError();
+                      refreshProfile();
+                    }} 
+                    variant="outline"
+                    className="w-full flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    I've Confirmed My Email
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      await signOut();
+                    }}
+                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                  >
+                    Back to Login
+                  </Button>
+                </div>
+                <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <p className="text-sm font-medium text-amber-700">Email not received?</p>
+                  </div>
+                  <p className="text-sm text-amber-600">
+                    Check your spam folder or contact support if you don't receive the confirmation email within a few minutes.
                   </p>
                 </div>
-              </div>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2 text-amber-600">
+                  {isUnauthorized ? 'Account Not Authorized' : 'Account Setup Issue'}
+                </h2>
+                <p className="text-gray-600 mb-4">
+                  {isUnauthorized 
+                    ? 'Your account is not authorized to access this system. Please contact an administrator to get invited to the team.'
+                    : isIncomplete
+                    ? 'Your account setup is incomplete. You may need a proper invitation from an administrator.'
+                    : 'There was an issue setting up your account.'
+                  }
+                </p>
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => {
+                      clearError();
+                      refreshProfile();
+                    }} 
+                    variant="outline"
+                    className="w-full flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Try Again
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      await signOut();
+                    }}
+                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+                  >
+                    Back to Login
+                  </Button>
+                </div>
+                {isUnauthorized && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-700">Need access?</p>
+                    </div>
+                    <p className="text-sm text-blue-600">
+                      Contact your system administrator to send you an invitation to join the team. 
+                      You must be invited by a director to access this system.
+                    </p>
+                    <div className="mt-3 p-2 bg-amber-50 rounded border border-amber-200">
+                      <p className="text-xs text-amber-700">
+                        <strong>Note:</strong> If you're the first user of this system, make sure you've confirmed your email address first.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -148,7 +193,7 @@ export const AuthPage: React.FC = () => {
           setLocalError(error.message);
         }
       } else {
-        setMessage('Please check your email for verification link');
+        setMessage('🎉 Account created successfully! Please check your email for a confirmation link to complete your registration.');
         setEmail('');
         setPassword('');
         setFullName('');
@@ -342,9 +387,9 @@ export const AuthPage: React.FC = () => {
               <div className="text-xs text-gray-500 mt-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Mail className="w-4 h-4" />
-                  <span>Invitation required for team access</span>
+                  <span>Email confirmation required</span>
                 </div>
-                <p>Contact an administrator to get invited, or be the first user to become director</p>
+                <p>After signup, check your email to confirm your account. First user becomes director automatically.</p>
               </div>
             </TabsContent>
           </Tabs>
