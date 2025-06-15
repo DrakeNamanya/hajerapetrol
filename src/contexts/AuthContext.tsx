@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { recoverAuthState } from '@/utils/authCleanup';
@@ -37,6 +37,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { signUp, signIn, signOut } = useAuthOperations();
 
   const loading = authLoading || profileLoading;
+
+  // Memoize the profile fetching function to prevent recreating it
+  const fetchProfileSafely = useCallback((userId: string) => {
+    setTimeout(() => {
+      fetchUserProfile(userId);
+    }, 100);
+  }, [fetchUserProfile]);
 
   const refreshProfile = async () => {
     if (user) {
@@ -97,12 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setAuthLoading(false);
             
             if (session?.user) {
-              // Use setTimeout to prevent potential deadlocks
-              setTimeout(() => {
-                if (mounted) {
-                  fetchUserProfile(session.user.id);
-                }
-              }, 100);
+              fetchProfileSafely(session.user.id);
             }
             break;
             
@@ -147,11 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(recoveredSession.user);
             setAuthLoading(false);
             if (recoveredSession.user) {
-              setTimeout(() => {
-                if (mounted) {
-                  fetchUserProfile(recoveredSession.user.id);
-                }
-              }, 100);
+              fetchProfileSafely(recoveredSession.user.id);
             }
           } else {
             setAuthLoading(false);
@@ -162,11 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(session.user);
           setAuthLoading(false);
           if (session.user) {
-            setTimeout(() => {
-              if (mounted) {
-                fetchUserProfile(session.user.id);
-              }
-            }, 100);
+            fetchProfileSafely(session.user.id);
           }
         } else {
           console.log('No existing session found');
@@ -187,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, resetProfile, setError]);
+  }, []); // Remove dependencies to prevent infinite loop
 
   const value: AuthContextType = {
     user,
