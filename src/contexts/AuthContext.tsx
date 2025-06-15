@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useCallback } from 'react';
 import { AuthContextType } from '@/types/auth';
 import { useProfileManager } from '@/hooks/useProfileManager';
 import { useAuthState } from '@/hooks/useAuthState';
@@ -27,13 +27,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetProfile
   } = useProfileManager();
 
+  // Memoize the resetProfile function to prevent recreation
+  const memoizedResetProfile = useCallback(() => {
+    resetProfile();
+  }, [resetProfile]);
+
+  // Memoize the setError function to prevent recreation
+  const memoizedSetError = useCallback((error: string | null) => {
+    setError(error);
+  }, [setError]);
+
   const {
     user,
     session,
     authLoading,
     setAuthLoading,
     setError: setAuthError
-  } = useAuthState(fetchUserProfile, resetProfile, setError);
+  } = useAuthState(fetchUserProfile, memoizedResetProfile, memoizedSetError);
 
   const {
     handleSignUp,

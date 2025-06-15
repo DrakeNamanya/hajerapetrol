@@ -13,13 +13,6 @@ export const useAuthState = (
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Memoize the profile fetching function to prevent recreating it
-  const fetchProfileSafely = useCallback((userId: string) => {
-    setTimeout(() => {
-      fetchUserProfile(userId);
-    }, 100);
-  }, [fetchUserProfile]);
-
   useEffect(() => {
     let mounted = true;
 
@@ -37,7 +30,10 @@ export const useAuthState = (
             setAuthLoading(false);
             
             if (session?.user) {
-              fetchProfileSafely(session.user.id);
+              // Use setTimeout to prevent auth deadlock
+              setTimeout(() => {
+                fetchUserProfile(session.user.id);
+              }, 100);
             }
             break;
             
@@ -82,7 +78,9 @@ export const useAuthState = (
             setUser(recoveredSession.user);
             setAuthLoading(false);
             if (recoveredSession.user) {
-              fetchProfileSafely(recoveredSession.user.id);
+              setTimeout(() => {
+                fetchUserProfile(recoveredSession.user.id);
+              }, 100);
             }
           } else {
             setAuthLoading(false);
@@ -93,7 +91,9 @@ export const useAuthState = (
           setUser(session.user);
           setAuthLoading(false);
           if (session.user) {
-            fetchProfileSafely(session.user.id);
+            setTimeout(() => {
+              fetchUserProfile(session.user.id);
+            }, 100);
           }
         } else {
           console.log('No existing session found');
@@ -114,7 +114,7 @@ export const useAuthState = (
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Remove dependencies to prevent infinite loop
+  }, [fetchUserProfile, resetProfile, setError]);
 
   return {
     user,
