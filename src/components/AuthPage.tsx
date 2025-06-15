@@ -5,11 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fuel, Building2, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Fuel, Building2, Mail, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthPage: React.FC = () => {
-  const { signUp, signIn, signOut, error, clearError, loading, user, profile } = useAuth();
+  const { signUp, signIn, signOut, error, clearError, loading, user, profile, refreshProfile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -23,7 +23,7 @@ export const AuthPage: React.FC = () => {
     if (user && !profile && !error) {
       const timeout = setTimeout(() => {
         setSetupTimeout(true);
-      }, 15000); // 15 seconds timeout
+      }, 10000); // Reduced to 10 seconds for faster feedback
 
       return () => clearTimeout(timeout);
     } else {
@@ -49,7 +49,8 @@ export const AuthPage: React.FC = () => {
 
   // Handle setup timeout or account issues
   if (user && (!profile || setupTimeout) && (error || setupTimeout)) {
-    const isAccountIssue = error?.includes('Account setup incomplete') || setupTimeout;
+    const isUnauthorized = error?.includes('not authorized') || error?.includes('contact an administrator');
+    const isIncomplete = error?.includes('setup incomplete') || setupTimeout;
     
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
@@ -57,20 +58,26 @@ export const AuthPage: React.FC = () => {
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2 text-amber-600">
-              {isAccountIssue ? 'Account Setup Required' : 'Setup Taking Too Long'}
+              {isUnauthorized ? 'Account Not Authorized' : 'Account Setup Issue'}
             </h2>
             <p className="text-gray-600 mb-4">
-              {isAccountIssue 
-                ? 'Your account needs to be set up by an administrator. Please contact them to send you a proper invitation.'
-                : 'Your account setup is taking longer than expected.'
+              {isUnauthorized 
+                ? 'Your account is not authorized to access this system. Please contact an administrator to get invited to the team.'
+                : isIncomplete
+                ? 'Your account setup is incomplete. You may need a proper invitation from an administrator.'
+                : 'There was an issue setting up your account.'
               }
             </p>
             <div className="space-y-3">
               <Button 
-                onClick={() => window.location.reload()} 
+                onClick={() => {
+                  clearError();
+                  refreshProfile();
+                }} 
                 variant="outline"
-                className="w-full"
+                className="w-full flex items-center gap-2"
               >
+                <RefreshCw className="w-4 h-4" />
                 Try Again
               </Button>
               <Button 
@@ -82,6 +89,13 @@ export const AuthPage: React.FC = () => {
                 Back to Login
               </Button>
             </div>
+            {isUnauthorized && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>Need access?</strong> Contact your system administrator to send you an invitation to join the team.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -50,18 +50,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Profile fetch error:', error);
         
-        // If profile doesn't exist, wait and retry (for new signups)
-        if (error.code === 'PGRST116' && retryCount < 5) {
+        // If profile doesn't exist and we haven't exceeded retry limit
+        if (error.code === 'PGRST116' && retryCount < 3) {
           console.log('Profile not found, retrying in 2 seconds...');
           await new Promise(resolve => setTimeout(resolve, 2000));
           return fetchUserProfile(userId, retryCount + 1);
         }
         
-        // After max retries, this might be a user without invitation
-        console.log('Profile not found after retries - user may not have proper invitation');
-        setError('Account setup incomplete. Please contact an administrator.');
+        // After retries, check if this user has a pending invitation
+        console.log('Checking for pending invitations...');
+        const { data: invitationData, error: invitationError } = await supabase
+          .from('team_invitations')
+          .select('*')
+          .eq('email', user?.email)
+          .is('accepted_at', null)
+          .gt('expires_at', new Date().toISOString())
+          .single();
+
+        if (!invitationError && invitationData) {
+          console.log('Found pending invitation, user needs to complete setup');
+          setError('Account setup incomplete. Please contact an administrator for proper invitation.');
+        } else {
+          console.log('No profile found and no pending invitation - unauthorized user');
+          setError('Account not authorized. Please contact an administrator to get invited to the system.');
+        }
+        
         setLoading(false);
         return false;
       }
@@ -103,12 +118,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(true);
             
             if (session?.user) {
-              // Immediate attempt, then retry logic if needed
-              const success = await fetchUserProfile(session.user.id);
-              if (!success && mounted) {
-                // If profile fetch failed, the user might need to be signed out
-                console.log('Profile fetch failed, might need admin approval');
-              }
+              // Use setTimeout to prevent potential deadlocks
+              setTimeout(() => {
+                if (mounted) {
+                  fetchUserProfile(session.user.id);
+                }
+              }, 100);
             }
             break;
             
@@ -143,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -152,20 +168,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSession(recoveredSession);
             setUser(recoveredSession.user);
             if (recoveredSession.user) {
-              await fetchUserProfile(recoveredSession.user.id);
+              setTimeout(() => {
+                if (mounted) {
+                  fetchUserProfile(recoveredSession.user.id);
+                }
+              }, 100);
             }
           } else {
             setLoading(false);
           }
         } else if (session && mounted) {
+          console.log('Found existing session for:', session.user.email);
           setSession(session);
           setUser(session.user);
           if (session.user) {
-            await fetchUserProfile(session.user.id);
+            setTimeout(() => {
+              if (mounted) {
+                fetchUserProfile(session.user.id);
+              }
+            }, 100);
           } else {
             setLoading(false);
           }
         } else {
+          console.log('No existing session found');
           setLoading(false);
         }
       } catch (error) {
