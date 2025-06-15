@@ -28,27 +28,56 @@ export interface CreateSaleData {
 }
 
 export const useSales = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
 
   // Get sales for current user's department or all if manager/accountant/director
   const { data: sales = [], isLoading, error } = useQuery({
     queryKey: ['sales'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false });
+      console.log('Fetching sales data...', { user: user?.id, profile: profile?.role });
+      
+      if (!user) {
+        console.log('No user found, cannot fetch sales');
+        throw new Error('User not authenticated');
+      }
 
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from('sales')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Supabase error fetching sales:', error);
+          throw error;
+        }
+
+        console.log('Sales data fetched successfully:', data?.length || 0, 'records');
+        return data || [];
+      } catch (fetchError) {
+        console.error('Error fetching sales:', {
+          message: fetchError.message,
+          details: fetchError.toString(),
+          hint: fetchError.hint || '',
+          code: fetchError.code || ''
+        });
+        throw fetchError;
+      }
     },
-    enabled: !!user,
+    enabled: !!user && !!profile,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
   // Set up real-time subscription for sales updates
   useEffect(() => {
-    if (!user) return;
+    if (!user || !profile) {
+      console.log('Skipping real-time subscription - no user or profile');
+      return;
+    }
+
+    console.log('Setting up real-time subscription for sales');
 
     const channel = supabase
       .channel('sales-changes')
@@ -89,18 +118,26 @@ export const useSales = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
 
     // Cleanup subscription on unmount
     return () => {
+      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [user, queryClient]);
+  }, [user, profile, queryClient]);
 
   // Create a new sale
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: CreateSaleData) => {
-      if (!user) throw new Error('User not authenticated');
+      console.log('Creating sale:', saleData);
+      
+      if (!user) {
+        console.error('Cannot create sale - user not authenticated');
+        throw new Error('User not authenticated');
+      }
 
       const { data, error } = await supabase
         .from('sales')
@@ -122,7 +159,12 @@ export const useSales = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating sale:', error);
+        throw error;
+      }
+
+      console.log('Sale created successfully:', data);
       return data;
     },
     onSuccess: () => {

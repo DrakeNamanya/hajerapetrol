@@ -37,8 +37,17 @@ const transformSalesData = (dbSales: any[]) => {
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
-  const { sales: rawSales, error: salesError } = useSales();
+  const { sales: rawSales, error: salesError, isLoading: salesLoading } = useSales();
   const { signOut } = useAuthOperations();
+
+  console.log('Index component state:', { 
+    user: !!user, 
+    profile: !!profile, 
+    loading, 
+    salesError: !!salesError,
+    salesLoading,
+    salesCount: rawSales?.length || 0
+  });
 
   // Transform the sales data to match expected interface
   const sales = rawSales ? transformSalesData(rawSales) : [];
@@ -60,18 +69,26 @@ const Index = () => {
 
   // Show error if sales failed to load for roles that need it
   if (salesError && ['director', 'manager', 'accountant'].includes(profile.role)) {
+    console.error('Sales loading error for', profile.role, ':', salesError);
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-100">
         <Card className="p-8 max-w-md">
           <CardContent className="text-center">
-            <h2 className="text-xl font-semibold text-red-600 mb-4">Unable to Load Data</h2>
+            <h2 className="text-xl font-semibold text-red-600 mb-4">Unable to Load Sales Data</h2>
             <p className="text-gray-600 mb-4">
-              There was an error loading the sales data. This might be due to:
+              There was an error loading the sales data. Error details:
             </p>
+            <div className="text-left text-sm text-gray-500 mb-6 p-3 bg-gray-100 rounded">
+              <p><strong>Error:</strong> {salesError?.message || 'Unknown error'}</p>
+              {salesError?.code && <p><strong>Code:</strong> {salesError.code}</p>}
+              {salesError?.hint && <p><strong>Hint:</strong> {salesError.hint}</p>}
+            </div>
+            <p className="text-gray-600 mb-4">This might be due to:</p>
             <ul className="text-left text-sm text-gray-500 mb-6 space-y-1">
               <li>• Network connectivity issues</li>
               <li>• Database access permissions</li>
               <li>• Your user profile setup</li>
+              <li>• Row Level Security policies</li>
             </ul>
             <Button onClick={() => window.location.reload()} className="mr-2">
               Retry
@@ -271,7 +288,16 @@ const Index = () => {
       </header>
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {renderUserContent()}
+        {salesLoading && ['director', 'manager', 'accountant'].includes(profile.role) ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading sales data...</p>
+            </CardContent>
+          </Card>
+        ) : (
+          renderUserContent()
+        )}
       </main>
     </div>
   );
