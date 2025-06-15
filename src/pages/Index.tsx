@@ -80,8 +80,8 @@ const Index = () => {
             </p>
             <div className="text-left text-sm text-gray-500 mb-6 p-3 bg-gray-100 rounded">
               <p><strong>Error:</strong> {salesError?.message || 'Unknown error'}</p>
-              {salesError?.code && <p><strong>Code:</strong> {salesError.code}</p>}
-              {salesError?.hint && <p><strong>Hint:</strong> {salesError.hint}</p>}
+              {(salesError as any)?.code && <p><strong>Code:</strong> {(salesError as any).code}</p>}
+              {(salesError as any)?.hint && <p><strong>Hint:</strong> {(salesError as any).hint}</p>}
             </div>
             <p className="text-gray-600 mb-4">This might be due to:</p>
             <ul className="text-left text-sm text-gray-500 mb-6 space-y-1">
