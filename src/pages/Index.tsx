@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,39 +15,15 @@ import { DirectorDashboard } from '@/components/DirectorDashboard';
 import { TeamManagement } from '@/components/TeamManagement';
 import { SalesAnalytics } from '@/components/SalesAnalytics';
 import { InventoryManagement } from '@/components/InventoryManagement';
-import { Fuel, ShoppingCart, UtensilsCrossed, Calculator, Users, Building, CheckCircle, LogOut, BarChart3, Package } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { Fuel, ShoppingCart, UtensilsCrossed, Building, LogOut, BarChart3, Package } from 'lucide-react';
+import { useSales } from '@/hooks/useSales';
+import { useAuth as useAuthOperations } from '@/contexts/AuthContext';
 import { RealtimeNotifications } from '@/components/RealtimeNotifications';
 
 const Index = () => {
   const { user, profile, loading } = useAuth();
-  
-  const [sales, setSales] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchSales = async () => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching sales:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load sales data",
-          variant: "destructive",
-        });
-      } else {
-        setSales(data || []);
-      }
-    };
-
-    if (user) {
-      fetchSales();
-    }
-  }, [user]);
+  const { sales, error: salesError } = useSales();
+  const { signOut } = useAuthOperations();
 
   if (loading) {
     return (
@@ -64,28 +40,41 @@ const Index = () => {
     return <AuthPage />;
   }
 
+  // Show error if sales failed to load for roles that need it
+  if (salesError && ['director', 'manager', 'accountant'].includes(profile.role)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-pink-100">
+        <Card className="p-8 max-w-md">
+          <CardContent className="text-center">
+            <h2 className="text-xl font-semibold text-red-600 mb-4">Unable to Load Data</h2>
+            <p className="text-gray-600 mb-4">
+              There was an error loading the sales data. This might be due to:
+            </p>
+            <ul className="text-left text-sm text-gray-500 mb-6 space-y-1">
+              <li>• Network connectivity issues</li>
+              <li>• Database access permissions</li>
+              <li>• Your user profile setup</li>
+            </ul>
+            <Button onClick={() => window.location.reload()} className="mr-2">
+              Retry
+            </Button>
+            <Button variant="outline" onClick={signOut}>
+              Sign Out
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const handleSaleRecord = (sale: any) => {
-    setSales(prev => [sale, ...prev]);
     console.log('Sale recorded:', sale);
+    // Sales will be automatically updated via real-time subscription in useSales hook
   };
 
   const handleSaleApproval = (saleId: number) => {
-    setSales(prev => prev.map(sale => 
-      sale.id === saleId 
-        ? { ...sale, status: 'accountant_approved' }
-        : sale
-    ));
-  };
-
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sign out",
-        variant: "destructive",
-      });
-    }
+    console.log('Sale approved:', saleId);
+    // Sales will be automatically updated via real-time subscription in useSales hook
   };
 
   const renderUserContent = () => {
@@ -106,7 +95,7 @@ const Index = () => {
             <TabsTrigger value="approvals">Sales Approvals</TabsTrigger>
           </TabsList>
           <TabsContent value="overview">
-            <DirectorDashboard sales={sales} />
+            <DirectorDashboard sales={sales || []} />
           </TabsContent>
           <TabsContent value="analytics">
             <SalesAnalytics />
@@ -141,7 +130,7 @@ const Index = () => {
             <TabsTrigger value="team">Team</TabsTrigger>
           </TabsList>
           <TabsContent value="management">
-            <ManagerDashboard sales={sales} onApprove={handleSaleApproval} />
+            <ManagerDashboard sales={sales || []} onApprove={handleSaleApproval} />
           </TabsContent>
           <TabsContent value="analytics">
             <SalesAnalytics />
@@ -252,7 +241,7 @@ const Index = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={handleLogout}
+                onClick={signOut}
                 className="flex items-center gap-2"
               >
                 <LogOut className="h-4 w-4" />
