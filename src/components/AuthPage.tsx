@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fuel, Building2, Mail, AlertCircle } from 'lucide-react';
+import { Fuel, Building2, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthPage: React.FC = () => {
@@ -16,23 +17,23 @@ export const AuthPage: React.FC = () => {
   const [localError, setLocalError] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [profileLoadingTimeout, setProfileLoadingTimeout] = useState(false);
+  const [setupTimeout, setSetupTimeout] = useState(false);
 
-  // Set a timeout for profile loading to prevent infinite loading
+  // Handle setup timeout
   useEffect(() => {
     if (user && !profile && !error) {
       const timeout = setTimeout(() => {
-        setProfileLoadingTimeout(true);
-      }, 10000); // 10 seconds timeout
+        setSetupTimeout(true);
+      }, 15000); // 15 seconds timeout
 
       return () => clearTimeout(timeout);
     } else {
-      setProfileLoadingTimeout(false);
+      setSetupTimeout(false);
     }
   }, [user, profile, error]);
 
-  // If user is authenticated but profile is still loading, show loading state with timeout
-  if (user && !profile && !error && !profileLoadingTimeout) {
+  // Handle account setup states
+  if (user && !profile && !error && !setupTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
         <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
@@ -40,27 +41,48 @@ export const AuthPage: React.FC = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
             <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
             <p className="text-gray-600">Please wait while we prepare your dashboard.</p>
+            <p className="text-sm text-gray-500 mt-2">This usually takes a few seconds.</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  // If profile loading timed out, show error
-  if (user && !profile && profileLoadingTimeout) {
+  // Handle setup timeout or account issues
+  if (user && (!profile || setupTimeout) && (error || setupTimeout)) {
+    const isAccountIssue = error?.includes('Account setup incomplete') || setupTimeout;
+    
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
         <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
           <CardContent className="p-8 text-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2 text-red-600">Setup Taking Too Long</h2>
-            <p className="text-gray-600 mb-4">Your account setup is taking longer than expected.</p>
-            <Button 
-              onClick={() => window.location.reload()} 
-              className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
-            >
-              Try Again
-            </Button>
+            <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2 text-amber-600">
+              {isAccountIssue ? 'Account Setup Required' : 'Setup Taking Too Long'}
+            </h2>
+            <p className="text-gray-600 mb-4">
+              {isAccountIssue 
+                ? 'Your account needs to be set up by an administrator. Please contact them to send you a proper invitation.'
+                : 'Your account setup is taking longer than expected.'
+              }
+            </p>
+            <div className="space-y-3">
+              <Button 
+                onClick={() => window.location.reload()} 
+                variant="outline"
+                className="w-full"
+              >
+                Try Again
+              </Button>
+              <Button 
+                onClick={async () => {
+                  await signOut();
+                }}
+                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
+              >
+                Back to Login
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -103,7 +125,6 @@ export const AuthPage: React.FC = () => {
         }
       } else {
         setMessage('Please check your email for verification link');
-        // Clear form on success
         setEmail('');
         setPassword('');
         setFullName('');
@@ -297,9 +318,9 @@ export const AuthPage: React.FC = () => {
               <div className="text-xs text-gray-500 mt-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Mail className="w-4 h-4" />
-                  <span>The first user becomes the Director automatically</span>
+                  <span>You need an invitation to join this system</span>
                 </div>
-                <p>After signing up, you can invite your team members</p>
+                <p>Contact an administrator to get invited to the team</p>
               </div>
             </TabsContent>
           </Tabs>
@@ -313,7 +334,7 @@ export const AuthPage: React.FC = () => {
           
           {message && (
             <Alert className="border-green-200 bg-green-50 mt-4">
-              <Mail className="h-4 w-4" />
+              <CheckCircle className="h-4 w-4" />
               <AlertDescription className="text-green-600">{message}</AlertDescription>
             </Alert>
           )}

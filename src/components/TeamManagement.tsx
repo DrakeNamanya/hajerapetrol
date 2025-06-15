@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { UserPlus, Users, Mail, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { UserPlus, Users, Mail, CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
@@ -36,7 +36,6 @@ export const TeamManagement: React.FC = () => {
     try {
       console.log('Fetching team data...');
       
-      // Fetch team members
       const { data: members, error: membersError } = await supabase
         .from('profiles')
         .select('*')
@@ -49,7 +48,6 @@ export const TeamManagement: React.FC = () => {
         setTeamMembers(members || []);
       }
 
-      // Fetch pending invitations
       const { data: pendingInvitations, error: invitationsError } = await supabase
         .from('team_invitations')
         .select('*')
@@ -110,7 +108,6 @@ export const TeamManagement: React.FC = () => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if email is already invited or registered
     const existingInvitation = invitations.find(inv => inv.email.toLowerCase() === normalizedEmail);
     const existingMember = teamMembers.find(member => member.email.toLowerCase() === normalizedEmail);
     
@@ -131,7 +128,6 @@ export const TeamManagement: React.FC = () => {
     try {
       console.log('Creating invitation record in database...');
 
-      // First, create the invitation record in the database
       const { data: inviteData, error: inviteError } = await supabase
         .from('team_invitations')
         .insert({
@@ -149,20 +145,39 @@ export const TeamManagement: React.FC = () => {
 
       console.log('Invitation record created successfully:', inviteData);
 
-      // Then, send the email invitation
       try {
         await sendInvitationEmail(normalizedEmail, role, department);
         
-        setSuccess(`Invitation sent successfully to ${email}! They will receive an email with instructions to join the team.`);
+        setSuccess(`✅ Invitation sent successfully to ${email}! 
+        
+📧 They will receive an email with detailed signup instructions.
+        
+⚠️ IMPORTANT: They must use the EXACT email address "${normalizedEmail}" when signing up.`);
+        
         setEmail('');
         setRole('');
         setDepartment('');
-        fetchTeamData(); // Refresh the data
+        fetchTeamData();
       } catch (emailError: any) {
-        console.error('Email sending failed, but invitation was created:', emailError);
-        setSuccess(`Invitation created in system for ${email}, but email delivery failed. Please contact them directly with signup instructions.`);
-        setError(`Email delivery issue: ${emailError.message}`);
-        fetchTeamData(); // Still refresh to show the pending invitation
+        console.error('Email sending failed:', emailError);
+        
+        // Check if it's a domain verification issue
+        if (emailError.message.includes('verify a domain')) {
+          setError(`⚠️ Email setup needed: The invitation was created in the system, but email delivery failed because the domain needs verification. 
+          
+Please verify your domain at resend.com/domains to send emails to external addresses.
+          
+For now, please contact ${email} directly and tell them to:
+1. Go to the signup page
+2. Use the email: ${normalizedEmail}
+3. Sign up with any password
+4. They'll automatically get the ${role} role in ${department}`);
+        } else {
+          setError(`Email delivery failed: ${emailError.message}. The invitation was created - please contact them directly with signup instructions.`);
+        }
+        
+        setSuccess(`System invitation created for ${email} (manual notification needed)`);
+        fetchTeamData();
       }
 
     } catch (error: any) {
@@ -224,6 +239,26 @@ export const TeamManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Important Instructions */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Important: How Team Invitations Work
+          </h4>
+          <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+            <li><strong>Send invitation</strong> - Enter team member's email and role</li>
+            <li><strong>Email delivery</strong> - They receive detailed signup instructions</li>
+            <li><strong>Critical:</strong> They must signup using the <strong>EXACT same email</strong> from the invitation</li>
+            <li><strong>Automatic setup</strong> - Upon signup, they get their assigned role automatically</li>
+            <li><strong>Expiration</strong> - Invitations expire in 7 days if not used</li>
+          </ol>
+          <div className="mt-3 p-2 bg-amber-100 rounded text-amber-800 text-sm">
+            <strong>Note:</strong> If emails aren't being delivered, you may need to verify your domain at resend.com/domains
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Invite New Team Member */}
       <Card>
         <CardHeader>
@@ -287,13 +322,15 @@ export const TeamManagement: React.FC = () => {
           
           {error && (
             <Alert className="border-red-200 bg-red-50 mt-4">
-              <AlertDescription className="text-red-600">{error}</AlertDescription>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-red-600 whitespace-pre-line">{error}</AlertDescription>
             </Alert>
           )}
           
           {success && (
             <Alert className="border-green-200 bg-green-50 mt-4">
-              <AlertDescription className="text-green-600">{success}</AlertDescription>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription className="text-green-600 whitespace-pre-line">{success}</AlertDescription>
             </Alert>
           )}
         </CardContent>
@@ -385,20 +422,6 @@ export const TeamManagement: React.FC = () => {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Instructions */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-4">
-          <h4 className="font-semibold text-blue-800 mb-2">How Invitations Work:</h4>
-          <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-            <li>Send an invitation with the team member's email address</li>
-            <li>The team member receives an email with detailed instructions</li>
-            <li>They visit the app and sign up with the EXACT same email from the invitation</li>
-            <li>Upon signup, they will automatically be assigned the role you specified</li>
-            <li>If they don't sign up within 7 days, the invitation expires</li>
-          </ol>
         </CardContent>
       </Card>
     </div>

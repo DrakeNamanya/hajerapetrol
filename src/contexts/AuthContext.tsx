@@ -20,7 +20,6 @@ interface AuthContextType {
   clearError: () => void;
 }
 
-// Initialize context with undefined to properly detect when it's not provided
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
@@ -40,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearError = () => setError(null);
 
-  const fetchUserProfile = async (userId: string, retryCount = 0) => {
+  const fetchUserProfile = async (userId: string, retryCount = 0): Promise<boolean> => {
     try {
       console.log(`Fetching profile for user: ${userId}, attempt: ${retryCount + 1}`);
       
@@ -53,34 +52,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         console.error('Error fetching profile:', error);
         
-        // If profile doesn't exist and this is a new signup, wait and retry
-        if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log('Profile not found, retrying in 1 second...');
-          setTimeout(() => {
-            fetchUserProfile(userId, retryCount + 1);
-          }, 1000);
-          return;
+        // If profile doesn't exist, wait and retry (for new signups)
+        if (error.code === 'PGRST116' && retryCount < 5) {
+          console.log('Profile not found, retrying in 2 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return fetchUserProfile(userId, retryCount + 1);
         }
         
-        // After max retries, clear loading state and set error
+        // After max retries, this might be a user without invitation
+        console.log('Profile not found after retries - user may not have proper invitation');
+        setError('Account setup incomplete. Please contact an administrator.');
         setLoading(false);
-        setError('Failed to load user profile');
-        return;
+        return false;
       }
 
       console.log('Profile fetched successfully:', data);
       setProfile(data);
       setError(null);
       setLoading(false);
+      return true;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
-      setLoading(false);
       setError('Failed to load user profile');
+      setLoading(false);
+      return false;
     }
   };
 
   const refreshProfile = async () => {
     if (user) {
+      setLoading(true);
       await fetchUserProfile(user.id);
     }
   };
@@ -88,27 +89,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
 
         console.log('Auth state changed:', event, session?.user?.email);
         
-        // Handle auth events
         switch (event) {
           case 'SIGNED_IN':
             setSession(session);
             setUser(session?.user ?? null);
             setError(null);
+            setLoading(true);
             
-            // Defer profile fetching to prevent deadlocks
             if (session?.user) {
-              setTimeout(() => {
-                if (mounted) {
-                  fetchUserProfile(session.user.id);
-                }
-              }, 500); // Longer delay to ensure profile is created
+              // Immediate attempt, then retry logic if needed
+              const success = await fetchUserProfile(session.user.id);
+              if (!success && mounted) {
+                // If profile fetch failed, the user might need to be signed out
+                console.log('Profile fetch failed, might need admin approval');
+              }
             }
             break;
             
@@ -141,20 +141,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Check for existing session with recovery mechanism
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Session initialization error:', error);
-          // Attempt recovery
           const recoveredSession = await recoverAuthState();
           if (recoveredSession && mounted) {
             setSession(recoveredSession);
             setUser(recoveredSession.user);
             if (recoveredSession.user) {
-              fetchUserProfile(recoveredSession.user.id);
+              await fetchUserProfile(recoveredSession.user.id);
             }
           } else {
             setLoading(false);
@@ -163,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(session);
           setUser(session.user);
           if (session.user) {
-            fetchUserProfile(session.user.id);
+            await fetchUserProfile(session.user.id);
           } else {
             setLoading(false);
           }
@@ -192,14 +190,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       setLoading(true);
       
-      // Clean up any existing auth state first
       cleanupAuthState();
       
-      // Attempt global sign out to ensure clean state
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
-        // Continue even if this fails
         console.log('Global signout during signup failed (expected):', err);
       }
       
@@ -230,14 +225,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(null);
       setLoading(true);
       
-      // Clean up existing state before signing in
       cleanupAuthState();
       
-      // Attempt global sign out first
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
-        // Continue even if this fails
         console.log('Global signout during signin failed (expected):', err);
       }
       
@@ -250,7 +242,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setError(error.message);
         setLoading(false);
       } else if (data.user) {
-        // Don't set loading to false here, let the auth state change handler manage it
         console.log('Sign in successful, waiting for profile...');
       }
       
@@ -265,24 +256,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setError(null);
-      
-      // Clean up auth state first
       cleanupAuthState();
       
-      // Attempt global sign out
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
         console.error('Sign out error:', err);
       }
       
-      // Force page reload for completely clean state
       window.location.href = '/';
     } catch (error: any) {
       console.error('Sign out failed:', error);
       setError('Sign out failed');
-      
-      // Force reload anyway to clear state
       window.location.href = '/';
     }
   };
