@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useProfileManager } from '@/hooks/useProfileManager';
@@ -45,7 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     needsPasswordChange,
     loading: passwordCheckLoading,
     markPasswordChanged
-  } = usePasswordChangeCheck();
+  } = usePasswordChangeCheck(user);
 
   const loading = authLoading || profileLoading || passwordCheckLoading;
   const error = profileError;
