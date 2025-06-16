@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      account_credentials: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          is_password_changed: boolean
+          temporary_password: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          is_password_changed?: boolean
+          temporary_password: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          is_password_changed?: boolean
+          temporary_password?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       business_settings: {
         Row: {
           address: string
@@ -216,6 +246,7 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           department: Database["public"]["Enums"]["department"]
           email: string
           full_name: string
@@ -226,6 +257,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           department: Database["public"]["Enums"]["department"]
           email: string
           full_name: string
@@ -236,6 +268,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           department?: Database["public"]["Enums"]["department"]
           email?: string
           full_name?: string

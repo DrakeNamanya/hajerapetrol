@@ -7,24 +7,23 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Users, Mail, CheckCircle, Clock, XCircle, AlertTriangle } from 'lucide-react';
+import { UserPlus, Users, UserCheck, UserX, Trash2, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
 
 type UserProfile = Database['public']['Tables']['profiles']['Row'];
-type TeamInvitation = Database['public']['Tables']['team_invitations']['Row'];
 
 export const TeamManagement: React.FC = () => {
   const { profile, user } = useAuth();
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<string>('');
   const [department, setDepartment] = useState<string>('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [teamMembers, setTeamMembers] = useState<UserProfile[]>([]);
-  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
 
   useEffect(() => {
     if (profile?.role === 'director') {
@@ -47,56 +46,16 @@ export const TeamManagement: React.FC = () => {
         console.log('Team members fetched:', members);
         setTeamMembers(members || []);
       }
-
-      const { data: pendingInvitations, error: invitationsError } = await supabase
-        .from('team_invitations')
-        .select('*')
-        .is('accepted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (invitationsError) {
-        console.error('Error fetching invitations:', invitationsError);
-      } else {
-        console.log('Pending invitations fetched:', pendingInvitations);
-        setInvitations(pendingInvitations || []);
-      }
     } catch (error) {
       console.error('Error in fetchTeamData:', error);
     }
   };
 
-  const sendInvitationEmail = async (invitationEmail: string, invitationRole: string, invitationDepartment: string) => {
-    try {
-      console.log('Sending invitation email...');
-      
-      const { data, error } = await supabase.functions.invoke('send-invitation', {
-        body: {
-          email: invitationEmail,
-          role: invitationRole,
-          department: invitationDepartment,
-          inviterName: profile?.full_name || 'Team Administrator',
-          businessName: 'HIPEMART OILS'
-        }
-      });
-
-      if (error) {
-        console.error('Error sending invitation email:', error);
-        throw new Error(`Failed to send invitation email: ${error.message}`);
-      }
-
-      console.log('Invitation email sent successfully:', data);
-      return data;
-    } catch (error: any) {
-      console.error('Error in sendInvitationEmail:', error);
-      throw error;
-    }
-  };
-
-  const handleInvite = async (e: React.FormEvent) => {
+  const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Attempting to send invitation...');
+    console.log('Creating account...');
     
-    if (!email || !role || !department) {
+    if (!email || !role || !department || !fullName) {
       setError('Please fill in all fields');
       return;
     }
@@ -107,14 +66,7 @@ export const TeamManagement: React.FC = () => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-
-    const existingInvitation = invitations.find(inv => inv.email.toLowerCase() === normalizedEmail);
     const existingMember = teamMembers.find(member => member.email.toLowerCase() === normalizedEmail);
-    
-    if (existingInvitation) {
-      setError('This email already has a pending invitation');
-      return;
-    }
     
     if (existingMember) {
       setError('This email is already registered as a team member');
@@ -126,85 +78,91 @@ export const TeamManagement: React.FC = () => {
     setSuccess('');
 
     try {
-      console.log('Creating invitation record in database...');
+      console.log('Creating complete user account...');
 
-      const { data: inviteData, error: inviteError } = await supabase
-        .from('team_invitations')
-        .insert({
+      const { data, error } = await supabase.functions.invoke('create-team-account', {
+        body: {
           email: normalizedEmail,
-          role: role as any,
-          department: department as any,
-          invited_by: user.id
-        })
-        .select();
-
-      if (inviteError) {
-        console.error('Database invitation error:', inviteError);
-        throw new Error(`Failed to create invitation: ${inviteError.message}`);
-      }
-
-      console.log('Invitation record created successfully:', inviteData);
-
-      try {
-        await sendInvitationEmail(normalizedEmail, role, department);
-        
-        setSuccess(`✅ Invitation sent successfully to ${email}! 
-        
-📧 They will receive an email with detailed signup instructions.
-        
-⚠️ IMPORTANT: They must use the EXACT email address "${normalizedEmail}" when signing up.`);
-        
-        setEmail('');
-        setRole('');
-        setDepartment('');
-        fetchTeamData();
-      } catch (emailError: any) {
-        console.error('Email sending failed:', emailError);
-        
-        // Check if it's a domain verification issue
-        if (emailError.message.includes('verify a domain')) {
-          setError(`⚠️ Email setup needed: The invitation was created in the system, but email delivery failed because the domain needs verification. 
-          
-Please verify your domain at resend.com/domains to send emails to external addresses.
-          
-For now, please contact ${email} directly and tell them to:
-1. Go to the signup page
-2. Use the email: ${normalizedEmail}
-3. Sign up with any password
-4. They'll automatically get the ${role} role in ${department}`);
-        } else {
-          setError(`Email delivery failed: ${emailError.message}. The invitation was created - please contact them directly with signup instructions.`);
+          role: role,
+          department: department,
+          fullName: fullName.trim(),
+          inviterName: profile?.full_name || 'Director',
+          businessName: 'HIPEMART OILS'
         }
-        
-        setSuccess(`System invitation created for ${email} (manual notification needed)`);
-        fetchTeamData();
+      });
+
+      if (error) {
+        console.error('Account creation error:', error);
+        throw new Error(`Failed to create account: ${error.message}`);
       }
+
+      console.log('Account created successfully:', data);
+      
+      setSuccess(`✅ Account created successfully for ${fullName}!
+      
+📧 Login credentials have been sent to ${email}.
+      
+🔐 They can login immediately with the provided credentials and will be prompted to change their password on first login.`);
+      
+      setEmail('');
+      setRole('');
+      setDepartment('');
+      setFullName('');
+      fetchTeamData();
 
     } catch (error: any) {
       console.error('Unexpected error:', error);
-      setError(`Failed to send invitation: ${error.message}`);
+      setError(`Failed to create account: ${error.message}`);
     }
 
     setLoading(false);
   };
 
-  const handleCancelInvitation = async (invitationId: string) => {
+  const handleToggleAccount = async (userId: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
-        .from('team_invitations')
-        .delete()
-        .eq('id', invitationId);
+        .from('profiles')
+        .update({ is_active: !currentStatus })
+        .eq('id', userId);
 
       if (error) {
-        console.error('Error canceling invitation:', error);
-        setError('Failed to cancel invitation');
+        console.error('Error toggling account status:', error);
+        setError('Failed to update account status');
       } else {
-        setSuccess('Invitation canceled successfully');
+        setSuccess(`Account ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
         fetchTeamData();
       }
     } catch (error) {
-      console.error('Error canceling invitation:', error);
-      setError('Failed to cancel invitation');
+      console.error('Error toggling account:', error);
+      setError('Failed to update account status');
+    }
+  };
+
+  const handleDeleteAccount = async (userId: string, memberName: string) => {
+    if (!confirm(`Are you sure you want to permanently delete ${memberName}'s account? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Soft delete by setting deleted_at timestamp
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          deleted_at: new Date().toISOString(),
+          is_active: false 
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error deleting account:', error);
+        setError('Failed to delete account');
+      } else {
+        setSuccess(`Account for ${memberName} has been deleted successfully`);
+        fetchTeamData();
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setError('Failed to delete account');
     }
   };
 
@@ -224,6 +182,10 @@ For now, please contact ${email} directly and tell them to:
     }
   };
 
+  const getStatusColor = (isActive: boolean) => {
+    return isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+  };
+
   if (profile?.role !== 'director') {
     return (
       <Card>
@@ -237,39 +199,51 @@ For now, please contact ${email} directly and tell them to:
     );
   }
 
+  // Filter out deleted accounts
+  const activeTeamMembers = teamMembers.filter(member => !member.deleted_at);
+
   return (
     <div className="space-y-6">
-      {/* Important Instructions */}
+      {/* Instructions */}
       <Card className="border-blue-200 bg-blue-50">
         <CardContent className="p-4">
           <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
-            Important: How Team Invitations Work
+            Direct Account Creation System
           </h4>
           <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-            <li><strong>Send invitation</strong> - Enter team member's email and role</li>
-            <li><strong>Email delivery</strong> - They receive detailed signup instructions</li>
-            <li><strong>Critical:</strong> They must signup using the <strong>EXACT same email</strong> from the invitation</li>
-            <li><strong>Automatic setup</strong> - Upon signup, they get their assigned role automatically</li>
-            <li><strong>Expiration</strong> - Invitations expire in 7 days if not used</li>
+            <li><strong>Create complete accounts</strong> - Enter employee details and create their account instantly</li>
+            <li><strong>Automatic credentials</strong> - System generates secure password and sends login details via email</li>
+            <li><strong>Immediate access</strong> - Employees can login right away (no signup required)</li>
+            <li><strong>Password security</strong> - Users must change password on first login</li>
+            <li><strong>Full control</strong> - Activate, deactivate, or delete accounts as needed</li>
           </ol>
-          <div className="mt-3 p-2 bg-amber-100 rounded text-amber-800 text-sm">
-            <strong>Note:</strong> If emails aren't being delivered, you may need to verify your domain at resend.com/domains
-          </div>
         </CardContent>
       </Card>
 
-      {/* Invite New Team Member */}
+      {/* Create New Account */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5" />
-            Invite Team Member
+            Create Team Member Account
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleInvite} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <form onSubmit={handleCreateAccount} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Doe"
+                  disabled={loading}
+                />
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input
@@ -277,7 +251,7 @@ For now, please contact ${email} directly and tell them to:
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="teammate@example.com"
+                  placeholder="john.doe@example.com"
                   disabled={loading}
                 />
               </div>
@@ -316,7 +290,7 @@ For now, please contact ${email} directly and tell them to:
             </div>
             
             <Button type="submit" disabled={loading} className="w-full md:w-auto">
-              {loading ? 'Sending Invitation...' : 'Send Invitation'}
+              {loading ? 'Creating Account...' : 'Create Account & Send Credentials'}
             </Button>
           </form>
           
@@ -336,73 +310,27 @@ For now, please contact ${email} directly and tell them to:
         </CardContent>
       </Card>
 
-      {/* Pending Invitations */}
-      {invitations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Pending Invitations ({invitations.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {invitations.map((invitation) => (
-                <div key={invitation.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-yellow-600" />
-                    <div>
-                      <p className="font-medium">{invitation.email}</p>
-                      <p className="text-sm text-gray-600">
-                        {getRoleDisplayName(invitation.role)} • {invitation.department}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Invited {new Date(invitation.created_at || '').toLocaleDateString()}
-                        {invitation.expires_at && ` • Expires ${new Date(invitation.expires_at).toLocaleDateString()}`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-yellow-800 border-yellow-300">
-                      Pending
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCancelInvitation(invitation.id)}
-                      className="text-red-600 border-red-300 hover:bg-red-50"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Team Members */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Team Members ({teamMembers.length})
+            Team Members ({activeTeamMembers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {teamMembers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            {activeTeamMembers.map((member) => (
+              <div key={member.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                     {member.full_name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <div>
                     <p className="font-medium">{member.full_name}</p>
                     <p className="text-sm text-gray-600">{member.email}</p>
                     <p className="text-xs text-gray-500">
-                      Joined {new Date(member.created_at || '').toLocaleDateString()}
+                      Created {new Date(member.created_at || '').toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -413,14 +341,42 @@ For now, please contact ${email} directly and tell them to:
                   <Badge variant="outline">
                     {getRoleDisplayName(member.role)}
                   </Badge>
-                  {member.is_active ? (
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-500" />
-                  )}
+                  <Badge className={getStatusColor(member.is_active || false)}>
+                    {member.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                  
+                  {/* Account Management Controls */}
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleAccount(member.id, member.is_active || false)}
+                      className={`${member.is_active ? 'text-red-600 border-red-300 hover:bg-red-50' : 'text-green-600 border-green-300 hover:bg-green-50'}`}
+                    >
+                      {member.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {member.is_active ? 'Deactivate' : 'Activate'}
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteAccount(member.id, member.full_name)}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
+            
+            {activeTeamMembers.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No team members yet. Create the first account above.</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
