@@ -24,8 +24,11 @@ export const RealtimeNotifications: React.FC = () => {
   useEffect(() => {
     if (!user || !profile) return;
 
+    // Create a unique channel name to avoid conflicts
+    const channelName = `notification-channel-${user.id}-${Date.now()}`;
+    
     const channel = supabase
-      .channel('notification-channel')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -81,7 +84,7 @@ export const RealtimeNotifications: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, profile]);
+  }, [user?.id, profile?.role]); // Use specific values instead of objects
 
   const dismissNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));

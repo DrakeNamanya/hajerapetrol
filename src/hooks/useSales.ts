@@ -79,8 +79,11 @@ export const useSales = () => {
 
     console.log('Setting up real-time subscription for sales');
 
+    // Create a unique channel name to avoid conflicts
+    const channelName = `sales-changes-${user.id}-${Date.now()}`;
+    
     const channel = supabase
-      .channel('sales-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -127,7 +130,7 @@ export const useSales = () => {
       console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [user, profile, queryClient]);
+  }, [user?.id, profile?.role, queryClient]); // Use specific values instead of objects to prevent unnecessary re-renders
 
   // Create a new sale
   const createSaleMutation = useMutation({
