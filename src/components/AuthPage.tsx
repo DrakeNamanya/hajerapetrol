@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,17 +17,35 @@ export const AuthPage: React.FC = () => {
   const [localLoading, setLocalLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [setupTimeout, setSetupTimeout] = useState(false);
+  const [setupProgress, setSetupProgress] = useState(0);
 
-  // Handle setup timeout
+  // Handle setup timeout with progress indicator
   useEffect(() => {
     if (user && !profile && !error) {
+      // Reset progress
+      setSetupProgress(0);
+      
+      // Progress simulation
+      const progressInterval = setInterval(() => {
+        setSetupProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + 10;
+        });
+      }, 500);
+
+      // Timeout after 8 seconds (reduced from 15)
       const timeout = setTimeout(() => {
         setSetupTimeout(true);
-      }, 15000); // Extended to 15 seconds for email confirmation
+        clearInterval(progressInterval);
+      }, 8000);
 
-      return () => clearTimeout(timeout);
+      return () => {
+        clearTimeout(timeout);
+        clearInterval(progressInterval);
+      };
     } else {
       setSetupTimeout(false);
+      setSetupProgress(0);
     }
   }, [user, profile, error]);
 
@@ -38,10 +55,40 @@ export const AuthPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 via-red-500 to-pink-600">
         <Card className="w-full max-w-lg bg-white/95 backdrop-blur-xl border-0 shadow-2xl">
           <CardContent className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+            <div className="relative mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <Building2 className="w-8 h-8 text-white" />
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                <div 
+                  className="bg-gradient-to-r from-orange-500 to-red-600 h-2 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${setupProgress}%` }}
+                ></div>
+              </div>
+            </div>
             <h2 className="text-xl font-semibold mb-2">Setting up your account...</h2>
-            <p className="text-gray-600">Please wait while we prepare your dashboard.</p>
-            <p className="text-sm text-gray-500 mt-2">This usually takes a few seconds.</p>
+            <p className="text-gray-600 mb-2">Please wait while we prepare your dashboard.</p>
+            <p className="text-sm text-gray-500">
+              {setupProgress < 30 && "Verifying your credentials..."}
+              {setupProgress >= 30 && setupProgress < 60 && "Creating your profile..."}
+              {setupProgress >= 60 && setupProgress < 90 && "Setting up permissions..."}
+              {setupProgress >= 90 && "Almost ready..."}
+            </p>
+            <div className="mt-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  clearError();
+                  refreshProfile();
+                }}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -102,13 +149,13 @@ export const AuthPage: React.FC = () => {
               <>
                 <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold mb-2 text-amber-600">
-                  {isUnauthorized ? 'Account Not Authorized' : 'Account Setup Issue'}
+                  {isUnauthorized ? 'Account Not Authorized' : 'Account Setup Taking Too Long'}
                 </h2>
                 <p className="text-gray-600 mb-4">
                   {isUnauthorized 
                     ? 'Your account is not authorized to access this system. Please contact an administrator to get invited to the team.'
-                    : isIncomplete
-                    ? 'Your account setup is incomplete. You may need a proper invitation from an administrator.'
+                    : setupTimeout
+                    ? 'Your account setup is taking longer than expected. This might be due to a slow connection or server delay.'
                     : 'There was an issue setting up your account.'
                   }
                 </p>
@@ -116,6 +163,7 @@ export const AuthPage: React.FC = () => {
                   <Button 
                     onClick={() => {
                       clearError();
+                      setSetupTimeout(false);
                       refreshProfile();
                     }} 
                     variant="outline"
@@ -133,6 +181,17 @@ export const AuthPage: React.FC = () => {
                     Back to Login
                   </Button>
                 </div>
+                {setupTimeout && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-700">Setup taking too long?</p>
+                    </div>
+                    <p className="text-sm text-blue-600">
+                      Try refreshing the page or contact support if the issue persists. Your account might need manual verification.
+                    </p>
+                  </div>
+                )}
                 {isUnauthorized && (
                   <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2 mb-2">
