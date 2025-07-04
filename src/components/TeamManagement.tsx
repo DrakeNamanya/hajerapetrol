@@ -117,43 +117,27 @@ export const TeamManagement: React.FC = () => {
       
       console.log('Step 4: Request payload prepared:', requestPayload);
       
-      // Add timeout and better error handling for the Edge Function call
+      // Create a promise that rejects after 30 seconds
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request timed out after 30 seconds. Please check your internet connection and try again.'));
+        }, 30000);
+      });
+
       console.log('Step 5: Calling Edge Function with 30 second timeout...');
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
-      let functionResponse;
-      try {
-        functionResponse = await supabase.functions.invoke('create-team-account', {
-          body: requestPayload,
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-          },
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-      } catch (invokeError: any) {
-        clearTimeout(timeoutId);
-        console.error('Edge Function invoke error:', invokeError);
-        
-        if (invokeError.name === 'AbortError') {
-          throw new Error('Request timed out after 30 seconds. Please check your internet connection and try again.');
+      const functionCallPromise = supabase.functions.invoke('create-team-account', {
+        body: requestPayload,
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
         }
-        
-        if (invokeError.message?.includes('Failed to fetch')) {
-          throw new Error('Network error: Unable to connect to the server. Please check your internet connection.');
-        }
-        
-        if (invokeError.message?.includes('NetworkError')) {
-          throw new Error('Network error occurred. Please check your internet connection and try again.');
-        }
-        
-        throw new Error(`Failed to send request to Edge Function: ${invokeError.message}`);
-      }
+      });
 
-      const { data, error: functionError } = functionResponse;
+      // Race between the function call and timeout
+      const functionResponse = await Promise.race([functionCallPromise, timeoutPromise]);
+
+      const { data, error: functionError } = functionResponse as any;
       
       console.log('Step 6: Edge Function response received:', { data, error: functionError });
 
