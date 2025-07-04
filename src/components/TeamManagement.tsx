@@ -10,6 +10,7 @@ import { UserPlus, Users, UserCheck, UserX, Trash2, CheckCircle, XCircle, AlertT
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
+import { ConnectionTest } from './ConnectionTest';
 
 type UserProfile = Database['public']['Tables']['profiles']['Row'];
 
@@ -52,7 +53,8 @@ export const TeamManagement: React.FC = () => {
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Creating account with data:', { email, role, department, fullName });
+    console.log('=== Starting account creation process ===');
+    console.log('Form data:', { email, role, department, fullName });
     
     if (!email || !role || !department || !fullName) {
       setError('Please fill in all fields');
@@ -77,7 +79,20 @@ export const TeamManagement: React.FC = () => {
     setSuccess('');
 
     try {
-      console.log('Step 1: Getting current session...');
+      console.log('Step 1: Checking Supabase connection...');
+      
+      // Test basic Supabase connectivity first
+      const { data: testConnection, error: connectionError } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1);
+      
+      if (connectionError) {
+        console.error('Supabase connection test failed:', connectionError);
+        throw new Error(`Database connection failed: ${connectionError.message}`);
+      }
+      
+      console.log('Step 2: Supabase connection OK, getting session...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
@@ -90,7 +105,7 @@ export const TeamManagement: React.FC = () => {
         throw new Error('Please sign out and sign in again to refresh your session.');
       }
 
-      console.log('Step 2: Session verified, preparing request...');
+      console.log('Step 3: Session verified, preparing Edge Function request...');
       const requestPayload = {
         email: normalizedEmail,
         role: role,
@@ -100,17 +115,47 @@ export const TeamManagement: React.FC = () => {
         businessName: 'HIPEMART OILS'
       };
       
-      console.log('Step 3: Calling Edge Function with payload:', requestPayload);
-
-      const { data, error: functionError } = await supabase.functions.invoke('create-team-account', {
-        body: requestPayload,
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
+      console.log('Step 4: Request payload prepared:', requestPayload);
+      
+      // Add timeout and better error handling for the Edge Function call
+      console.log('Step 5: Calling Edge Function with 30 second timeout...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      let functionResponse;
+      try {
+        functionResponse = await supabase.functions.invoke('create-team-account', {
+          body: requestPayload,
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (invokeError: any) {
+        clearTimeout(timeoutId);
+        console.error('Edge Function invoke error:', invokeError);
+        
+        if (invokeError.name === 'AbortError') {
+          throw new Error('Request timed out after 30 seconds. Please check your internet connection and try again.');
         }
-      });
+        
+        if (invokeError.message?.includes('Failed to fetch')) {
+          throw new Error('Network error: Unable to connect to the server. Please check your internet connection.');
+        }
+        
+        if (invokeError.message?.includes('NetworkError')) {
+          throw new Error('Network error occurred. Please check your internet connection and try again.');
+        }
+        
+        throw new Error(`Failed to send request to Edge Function: ${invokeError.message}`);
+      }
 
-      console.log('Step 4: Edge Function response:', { data, error: functionError });
+      const { data, error: functionError } = functionResponse;
+      
+      console.log('Step 6: Edge Function response received:', { data, error: functionError });
 
       if (functionError) {
         console.error('Edge Function error details:', {
@@ -152,7 +197,7 @@ export const TeamManagement: React.FC = () => {
         throw new Error(data.error || 'Account creation failed for unknown reason.');
       }
 
-      console.log('Step 5: Account created successfully:', data);
+      console.log('Step 7: Account created successfully:', data);
       
       setSuccess(`✅ Account created successfully for ${fullName}!
       
@@ -170,20 +215,28 @@ export const TeamManagement: React.FC = () => {
       fetchTeamData();
 
     } catch (error: any) {
-      console.error('Account creation error:', error);
+      console.error('=== Account creation error ===');
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       
       let displayError = error.message || 'An unexpected error occurred';
       
       // Handle common network errors
       if (displayError.includes('Failed to fetch') || displayError.includes('NetworkError')) {
         displayError = 'Network error. Please check your internet connection and try again.';
+      } else if (displayError.includes('timeout') || displayError.includes('timed out')) {
+        displayError = 'Request timed out. Please check your internet connection and try again.';
       } else if (displayError.includes('Edge Function returned a non-2xx status code')) {
-        displayError = 'Server error. Please ensure all fields are filled correctly and try again. If the problem persists, contact support.';
+        displayError = 'Server error occurred. Please try again in a few moments. If the issue persists, check that all required information is provided correctly.';
       }
       
       setError(displayError);
     } finally {
       setLoading(false);
+      console.log('=== Account creation process completed ===');
     }
   };
 
@@ -273,6 +326,9 @@ export const TeamManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Connection Test */}
+      <ConnectionTest />
+
       {/* Instructions */}
       <Card className="border-blue-200 bg-blue-50">
         <CardContent className="p-4">
