@@ -48,5 +48,24 @@ export const usePasswordChangeCheck = () => {
     checkPasswordChangeStatus();
   }, [user?.id]);
 
-  return { needsPasswordChange, loading };
+  const markPasswordChanged = async () => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('account_credentials')
+        .update({ is_password_changed: true })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error marking password as changed:', error);
+      } else {
+        setNeedsPasswordChange(false);
+      }
+    } catch (error) {
+      console.error('Error updating password change status:', error);
+    }
+  };
+
+  return { needsPasswordChange, loading, markPasswordChanged };
 };
