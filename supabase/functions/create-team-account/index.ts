@@ -3,8 +3,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0';
 import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -32,30 +30,78 @@ function generatePassword(length: number = 12): string {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log('Edge function called with method:', req.method);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email, role, department, fullName, inviterName, businessName }: CreateAccountRequest = await req.json();
+    // Validate request method
+    if (req.method !== "POST") {
+      throw new Error("Method not allowed");
+    }
 
-    console.log('Creating account for:', email);
+    // Parse and validate request body
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      throw new Error("Invalid JSON in request body");
+    }
+
+    const { email, role, department, fullName, inviterName, businessName }: CreateAccountRequest = requestBody;
+
+    // Validate required fields
+    if (!email || !role || !department || !fullName || !inviterName || !businessName) {
+      throw new Error("Missing required fields: email, role, department, fullName, inviterName, businessName");
+    }
+
+    console.log('Creating account for:', email, 'with role:', role, 'department:', department);
+
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase configuration');
+      throw new Error("Server configuration error: Missing Supabase credentials");
+    }
+
+    if (!resendApiKey) {
+      console.error('Missing Resend API key');
+      throw new Error("Server configuration error: Missing email service credentials");
+    }
 
     // Initialize Supabase admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
       }
-    );
+    });
+
+    // Get the inviter's ID from the authorization header
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      throw new Error('Authorization header required');
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: inviter }, error: inviterError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (inviterError || !inviter) {
+      console.error('Invalid authorization token:', inviterError);
+      throw new Error('Invalid authorization token');
+    }
+
+    console.log('Inviter verified:', inviter.id);
 
     // Generate secure password
     const temporaryPassword = generatePassword(12);
-    console.log('Generated password for:', email);
+    console.log('Generated temporary password for:', email);
 
     // Create user account directly using admin client
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -78,19 +124,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Auth user created successfully:', authData.user.id);
 
-    // Get the inviter's ID from the authorization header
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      throw new Error('Authorization header required');
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user: inviter }, error: inviterError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (inviterError || !inviter) {
-      throw new Error('Invalid authorization token');
-    }
-
     // Create profile directly
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
@@ -107,7 +140,11 @@ const handler = async (req: Request): Promise<Response> => {
     if (profileError) {
       console.error('Profile creation error:', profileError);
       // Clean up auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      } catch (deleteError) {
+        console.error('Failed to cleanup user after profile error:', deleteError);
+      }
       throw new Error(`Failed to create user profile: ${profileError.message}`);
     }
 
@@ -126,11 +163,18 @@ const handler = async (req: Request): Promise<Response> => {
     if (credentialsError) {
       console.error('Credentials storage error:', credentialsError);
       // Clean up on error
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      } catch (deleteError) {
+        console.error('Failed to cleanup user after credentials error:', deleteError);
+      }
       throw new Error(`Failed to store credentials: ${credentialsError.message}`);
     }
 
     console.log('Credentials stored successfully');
+
+    // Initialize Resend client
+    const resend = new Resend(resendApiKey);
 
     // Send credentials email using verified Resend domain
     try {
@@ -194,18 +238,22 @@ const handler = async (req: Request): Promise<Response> => {
       if (emailResponse.error) {
         console.error("Email sending failed:", emailResponse.error);
         // Clean up created account if email fails
-        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+        } catch (deleteError) {
+          console.error('Failed to cleanup user after email error:', deleteError);
+        }
         throw new Error(`Failed to send credentials email: ${emailResponse.error.message}`);
       }
 
-      console.log("Account creation email sent successfully:", emailResponse);
+      console.log("Account creation email sent successfully:", emailResponse.data);
 
       return new Response(JSON.stringify({ 
         success: true, 
         message: "Account created successfully and credentials sent via email",
         userId: authData.user.id,
         email: email,
-        data: emailResponse 
+        emailId: emailResponse.data?.id
       }), {
         status: 200,
         headers: {
@@ -213,23 +261,39 @@ const handler = async (req: Request): Promise<Response> => {
           ...corsHeaders,
         },
       });
+
     } catch (emailError: any) {
       console.error("Email sending error:", emailError);
       // Clean up created account if email fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      } catch (deleteError) {
+        console.error('Failed to cleanup user after email error:', deleteError);
+      }
       throw new Error(`Failed to send credentials email: ${emailError.message}`);
     }
 
   } catch (error: any) {
     console.error("Error in create-team-account function:", error);
+    
+    // Return a proper error response
+    const errorMessage = error.message || 'An unexpected error occurred';
+    const statusCode = error.message?.includes('Authorization') ? 401 :
+                      error.message?.includes('Method not allowed') ? 405 :
+                      error.message?.includes('Missing required fields') ? 400 : 500;
+
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error.message 
+        error: errorMessage,
+        timestamp: new Date().toISOString()
       }),
       {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: statusCode,
+        headers: { 
+          "Content-Type": "application/json", 
+          ...corsHeaders 
+        },
       }
     );
   }
