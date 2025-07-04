@@ -71,7 +71,7 @@ export const ConnectionTest: React.FC = () => {
       
       if (session) {
         // Test with minimal payload to see if function is reachable
-        const { error } = await supabase.functions.invoke('create-team-account', {
+        const response = await supabase.functions.invoke('create-team-account', {
           body: { test: true },
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
@@ -80,12 +80,12 @@ export const ConnectionTest: React.FC = () => {
         });
         
         // We expect an error here (missing fields), but if we get one, it means the function is reachable
-        if (error && error.message?.includes('Missing required fields')) {
+        if (response.error && response.error.message?.includes('Missing required fields')) {
           setResults(prev => ({ ...prev, edgeFunction: 'success' }));
           details.push('Edge Function: Reachable (validation working)');
-        } else if (error) {
+        } else if (response.error) {
           setResults(prev => ({ ...prev, edgeFunction: 'error' }));
-          details.push(`Edge Function Error: ${error.message}`);
+          details.push(`Edge Function Error: ${response.error.message}`);
         } else {
           setResults(prev => ({ ...prev, edgeFunction: 'success' }));
           details.push('Edge Function: Reachable');

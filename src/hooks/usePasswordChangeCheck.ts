@@ -1,68 +1,52 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User } from '@supabase/supabase-js';
+import { useAuth } from '@/contexts/AuthContext';
 
-export const usePasswordChangeCheck = (user: User | null) => {
+export const usePasswordChangeCheck = () => {
+  const { user } = useAuth();
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkPasswordChangeStatus = async () => {
-      if (!user) {
+      if (!user?.id) {
         setLoading(false);
         return;
       }
 
       try {
+        console.log('Checking password change status for user:', user.id);
+        
+        // Use .maybeSingle() instead of .single() to handle cases where no record exists
         const { data, error } = await supabase
           .from('account_credentials')
           .select('is_password_changed')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle(); // This returns null if no record exists instead of throwing an error
 
         if (error) {
-          // If no record found, user probably signed up normally
-          if (error.code === 'PGRST116') {
-            setNeedsPasswordChange(false);
-          } else {
-            console.error('Error checking password change status:', error);
-          }
-        } else {
+          console.error('Error checking password change status:', error);
+          setNeedsPasswordChange(false);
+        } else if (data) {
+          // If record exists, check if password needs to be changed
           setNeedsPasswordChange(!data.is_password_changed);
+          console.log('Password needs change:', !data.is_password_changed);
+        } else {
+          // If no record exists, user doesn't need password change (they're not from team management)
+          setNeedsPasswordChange(false);
+          console.log('No account credentials record found - user does not need password change');
         }
       } catch (error) {
-        console.error('Error in password change check:', error);
+        console.error('Error in password check:', error);
+        setNeedsPasswordChange(false);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     checkPasswordChangeStatus();
-  }, [user]);
+  }, [user?.id]);
 
-  const markPasswordChanged = async () => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('account_credentials')
-        .update({ is_password_changed: true })
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error marking password as changed:', error);
-      } else {
-        setNeedsPasswordChange(false);
-      }
-    } catch (error) {
-      console.error('Error updating password change status:', error);
-    }
-  };
-
-  return {
-    needsPasswordChange,
-    loading,
-    markPasswordChanged
-  };
+  return { needsPasswordChange, loading };
 };
