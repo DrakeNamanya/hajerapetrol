@@ -33,6 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
   console.log('=== Edge function started ===');
   console.log('Request method:', req.method);
   console.log('Request URL:', req.url);
+  console.log('Request headers:', Object.fromEntries(req.headers.entries()));
 
   if (req.method === "OPTIONS") {
     console.log('Handling CORS preflight request');
@@ -43,35 +44,81 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate request method
     if (req.method !== "POST") {
       console.error('Invalid request method:', req.method);
-      throw new Error(`Method ${req.method} not allowed`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Method ${req.method} not allowed. Use POST.` 
+        }), 
+        { 
+          status: 405, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     // Parse and validate request body
     let requestBody;
     try {
       const bodyText = await req.text();
-      console.log('Raw request body:', bodyText);
+      console.log('Raw request body length:', bodyText.length);
+      if (!bodyText) {
+        throw new Error("Empty request body");
+      }
       requestBody = JSON.parse(bodyText);
-      console.log('Parsed request body:', requestBody);
+      console.log('Parsed request body keys:', Object.keys(requestBody));
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
-      throw new Error("Invalid JSON in request body");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Invalid JSON in request body" 
+        }), 
+        { 
+          status: 400, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     const { email, role, department, fullName, inviterName, businessName }: CreateAccountRequest = requestBody;
 
     // Validate required fields
-    if (!email || !role || !department || !fullName || !inviterName || !businessName) {
-      const missingFields = [];
-      if (!email) missingFields.push('email');
-      if (!role) missingFields.push('role');
-      if (!department) missingFields.push('department');
-      if (!fullName) missingFields.push('fullName');
-      if (!inviterName) missingFields.push('inviterName');
-      if (!businessName) missingFields.push('businessName');
-      
+    const missingFields = [];
+    if (!email) missingFields.push('email');
+    if (!role) missingFields.push('role');
+    if (!department) missingFields.push('department');
+    if (!fullName) missingFields.push('fullName');
+    if (!inviterName) missingFields.push('inviterName');
+    if (!businessName) missingFields.push('businessName');
+    
+    if (missingFields.length > 0) {
       console.error('Missing required fields:', missingFields);
-      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Missing required fields: ${missingFields.join(', ')}` 
+        }), 
+        { 
+          status: 400, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error('Invalid email format:', email);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Invalid email format" 
+        }), 
+        { 
+          status: 400, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     console.log('Creating account for:', { email, role, department, fullName });
@@ -84,17 +131,36 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Environment check:', {
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseServiceKey: !!supabaseServiceKey,
-      hasResendApiKey: !!resendApiKey
+      hasResendApiKey: !!resendApiKey,
+      supabaseUrlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing'
     });
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase configuration');
-      throw new Error("Server configuration error: Missing Supabase credentials");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Server configuration error: Missing Supabase credentials" 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     if (!resendApiKey) {
       console.error('Missing Resend API key');
-      throw new Error("Server configuration error: Missing email service credentials");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Server configuration error: Missing email service credentials" 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     // Initialize Supabase admin client
@@ -112,7 +178,16 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (!authHeader) {
       console.error('No authorization header provided');
-      throw new Error('Authorization header required');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Authorization header required' 
+        }), 
+        { 
+          status: 401, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -122,7 +197,16 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (inviterError || !inviter) {
       console.error('Invalid authorization token:', inviterError);
-      throw new Error(`Invalid authorization token: ${inviterError?.message || 'User not found'}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Invalid authorization token: ${inviterError?.message || 'User not found'}` 
+        }), 
+        { 
+          status: 401, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     console.log('Inviter verified:', inviter.id);
@@ -133,13 +217,31 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (existingUserError) {
       console.error('Error checking existing users:', existingUserError);
-      throw new Error(`Failed to check existing users: ${existingUserError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to check existing users: ${existingUserError.message}` 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     const emailExists = existingUser?.users?.some(user => user.email?.toLowerCase() === email.toLowerCase());
     if (emailExists) {
       console.error('Email already exists:', email);
-      throw new Error(`An account with email ${email} already exists`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `An account with email ${email} already exists` 
+        }), 
+        { 
+          status: 409, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     // Generate secure password
@@ -159,12 +261,30 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (authError) {
       console.error('Auth user creation error:', authError);
-      throw new Error(`Failed to create user account: ${authError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to create user account: ${authError.message}` 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     if (!authData.user) {
       console.error('User creation failed - no user data returned');
-      throw new Error('User creation failed - no user data returned');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'User creation failed - no user data returned' 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     console.log('Auth user created successfully:', authData.user.id);
@@ -192,7 +312,16 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (deleteError) {
         console.error('Failed to cleanup user after profile error:', deleteError);
       }
-      throw new Error(`Failed to create user profile: ${profileError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to create user profile: ${profileError.message}` 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     console.log('Profile created successfully');
@@ -217,7 +346,16 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (deleteError) {
         console.error('Failed to cleanup user after credentials error:', deleteError);
       }
-      throw new Error(`Failed to store credentials: ${credentialsError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to store credentials: ${credentialsError.message}` 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
     console.log('Credentials stored successfully');
@@ -295,7 +433,16 @@ const handler = async (req: Request): Promise<Response> => {
         } catch (deleteError) {
           console.error('Failed to cleanup user after email error:', deleteError);
         }
-        throw new Error(`Failed to send credentials email: ${emailResponse.error.message}`);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `Failed to send credentials email: ${emailResponse.error.message}` 
+          }), 
+          { 
+            status: 500, 
+            headers: { "Content-Type": "application/json", ...corsHeaders } 
+          }
+        );
       }
 
       console.log("Account creation email sent successfully:", emailResponse.data);
@@ -328,7 +475,16 @@ const handler = async (req: Request): Promise<Response> => {
       } catch (deleteError) {
         console.error('Failed to cleanup user after email error:', deleteError);
       }
-      throw new Error(`Failed to send credentials email: ${emailError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to send credentials email: ${emailError.message}` 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
     }
 
   } catch (error: any) {
