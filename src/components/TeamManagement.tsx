@@ -52,7 +52,7 @@ export const TeamManagement: React.FC = () => {
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Creating account...');
+    console.log('Creating account with data:', { email, role, department, fullName });
     
     if (!email || !role || !department || !fullName) {
       setError('Please fill in all fields');
@@ -77,80 +77,82 @@ export const TeamManagement: React.FC = () => {
     setSuccess('');
 
     try {
-      console.log('Getting current session...');
+      console.log('Step 1: Getting current session...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
         console.error('Session error:', sessionError);
-        throw new Error(`Authentication error: ${sessionError.message}`);
+        throw new Error(`Session error: ${sessionError.message}`);
       }
 
       if (!session?.access_token) {
         console.error('No valid session found');
-        throw new Error('No valid authentication session found. Please sign out and sign in again.');
+        throw new Error('Please sign out and sign in again to refresh your session.');
       }
 
-      console.log('Session verified, calling Edge Function...');
-      console.log('Request payload:', {
+      console.log('Step 2: Session verified, preparing request...');
+      const requestPayload = {
         email: normalizedEmail,
         role: role,
         department: department,
         fullName: fullName.trim(),
         inviterName: profile?.full_name || 'Director',
         businessName: 'HIPEMART OILS'
-      });
+      };
+      
+      console.log('Step 3: Calling Edge Function with payload:', requestPayload);
 
-      const { data, error } = await supabase.functions.invoke('create-team-account', {
-        body: {
-          email: normalizedEmail,
-          role: role,
-          department: department,
-          fullName: fullName.trim(),
-          inviterName: profile?.full_name || 'Director',
-          businessName: 'HIPEMART OILS'
-        },
+      const { data, error: functionError } = await supabase.functions.invoke('create-team-account', {
+        body: requestPayload,
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json'
         }
       });
 
-      console.log('Edge Function response:', { data, error });
+      console.log('Step 4: Edge Function response:', { data, error: functionError });
 
-      if (error) {
-        console.error('Edge Function error:', error);
+      if (functionError) {
+        console.error('Edge Function error details:', {
+          message: functionError.message,
+          details: functionError.details,
+          hint: functionError.hint,
+          code: functionError.code
+        });
         
-        // Provide more specific error messages based on error details
-        let errorMessage = 'Failed to create account';
-        
-        if (error.message) {
-          errorMessage = error.message;
-        } else if (error.details) {
-          errorMessage = error.details;
-        } else if (error.hint) {
-          errorMessage = error.hint;
+        // More specific error handling
+        if (functionError.message?.includes('already exists') || functionError.details?.includes('already exists')) {
+          throw new Error('An account with this email already exists in the system.');
         }
         
-        // Check for common error patterns
-        if (errorMessage.includes('already exists')) {
-          errorMessage = 'An account with this email already exists';
-        } else if (errorMessage.includes('invalid email')) {
-          errorMessage = 'Please provide a valid email address';
-        } else if (errorMessage.includes('authorization')) {
-          errorMessage = 'Authorization failed. Please sign out and sign in again.';
-        } else if (errorMessage.includes('network')) {
-          errorMessage = 'Network error. Please check your connection and try again.';
+        if (functionError.message?.includes('authorization') || functionError.message?.includes('Invalid authorization')) {
+          throw new Error('Authentication failed. Please sign out and sign in again.');
         }
         
-        throw new Error(errorMessage);
+        if (functionError.message?.includes('validation') || functionError.message?.includes('Missing required fields')) {
+          throw new Error('Please check that all fields are filled correctly.');
+        }
+        
+        if (functionError.message?.includes('email') && functionError.message?.includes('invalid')) {
+          throw new Error('Please provide a valid email address.');
+        }
+        
+        // Generic error with more details
+        const errorMsg = functionError.message || functionError.details || 'Unknown error occurred';
+        throw new Error(`Account creation failed: ${errorMsg}`);
       }
 
       if (!data) {
         console.error('No data returned from Edge Function');
-        throw new Error('Account creation failed - no response from server');
+        throw new Error('Account creation failed - no response from server. Please try again.');
       }
 
-      console.log('Account created successfully:', data);
+      if (!data.success) {
+        console.error('Edge Function returned failure:', data);
+        throw new Error(data.error || 'Account creation failed for unknown reason.');
+      }
+
+      console.log('Step 5: Account created successfully:', data);
       
       setSuccess(`✅ Account created successfully for ${fullName}!
       
@@ -158,10 +160,13 @@ export const TeamManagement: React.FC = () => {
       
 🔐 They can login immediately with the provided credentials and will be prompted to change their password on first login.`);
       
+      // Clear form
       setEmail('');
       setRole('');
       setDepartment('');
       setFullName('');
+      
+      // Refresh team data
       fetchTeamData();
 
     } catch (error: any) {
@@ -169,15 +174,17 @@ export const TeamManagement: React.FC = () => {
       
       let displayError = error.message || 'An unexpected error occurred';
       
-      // Add troubleshooting hints for common issues
-      if (displayError.includes('Edge Function returned a non-2xx status code')) {
-        displayError = 'Server error occurred. Please try again in a few moments. If the issue persists, check that all required information is provided correctly.';
+      // Handle common network errors
+      if (displayError.includes('Failed to fetch') || displayError.includes('NetworkError')) {
+        displayError = 'Network error. Please check your internet connection and try again.';
+      } else if (displayError.includes('Edge Function returned a non-2xx status code')) {
+        displayError = 'Server error. Please ensure all fields are filled correctly and try again. If the problem persists, contact support.';
       }
       
       setError(displayError);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleToggleAccount = async (userId: string, currentStatus: boolean) => {

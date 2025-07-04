@@ -33,7 +33,6 @@ const handler = async (req: Request): Promise<Response> => {
   console.log('=== Edge function started ===');
   console.log('Request method:', req.method);
   console.log('Request URL:', req.url);
-  console.log('Request headers:', Object.fromEntries(req.headers.entries()));
 
   if (req.method === "OPTIONS") {
     console.log('Handling CORS preflight request');
@@ -56,16 +55,50 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log('Step 1: Validating environment variables...');
+    // Validate environment variables first
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase configuration');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Server configuration error: Missing Supabase credentials" 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+
+    if (!resendApiKey) {
+      console.error('Missing Resend API key');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Server configuration error: Missing email service credentials" 
+        }), 
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+
+    console.log('Step 2: Parsing request body...');
     // Parse and validate request body
     let requestBody;
     try {
       const bodyText = await req.text();
-      console.log('Raw request body length:', bodyText.length);
       if (!bodyText) {
         throw new Error("Empty request body");
       }
       requestBody = JSON.parse(bodyText);
-      console.log('Parsed request body keys:', Object.keys(requestBody));
+      console.log('Request body parsed successfully');
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError);
       return new Response(
@@ -80,6 +113,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log('Step 3: Validating request fields...');
     const { email, role, department, fullName, inviterName, businessName }: CreateAccountRequest = requestBody;
 
     // Validate required fields
@@ -121,60 +155,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Creating account for:', { email, role, department, fullName });
-
-    // Validate environment variables
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseServiceKey: !!supabaseServiceKey,
-      hasResendApiKey: !!resendApiKey,
-      supabaseUrlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing'
-    });
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing Supabase configuration');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Server configuration error: Missing Supabase credentials" 
-        }), 
-        { 
-          status: 500, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
-        }
-      );
-    }
-
-    if (!resendApiKey) {
-      console.error('Missing Resend API key');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Server configuration error: Missing email service credentials" 
-        }), 
-        { 
-          status: 500, 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
-        }
-      );
-    }
-
-    // Initialize Supabase admin client
-    console.log('Initializing Supabase admin client...');
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
+    console.log('Step 4: Validating authorization...');
     // Get the inviter's ID from the authorization header
     const authHeader = req.headers.get('authorization');
-    console.log('Authorization header present:', !!authHeader);
     
     if (!authHeader) {
       console.error('No authorization header provided');
@@ -190,8 +173,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log('Step 5: Initializing Supabase admin client...');
+    // Initialize Supabase admin client
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     const token = authHeader.replace('Bearer ', '');
-    console.log('Verifying inviter token...');
+    console.log('Step 6: Verifying inviter token...');
     
     const { data: { user: inviter }, error: inviterError } = await supabaseAdmin.auth.getUser(token);
     
@@ -209,10 +201,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Inviter verified:', inviter.id);
-
+    console.log('Step 7: Checking if email already exists...');
     // Check if email already exists
-    console.log('Checking if email already exists...');
     const { data: existingUser, error: existingUserError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (existingUserError) {
@@ -244,12 +234,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log('Step 8: Generating password and creating user...');
     // Generate secure password
     const temporaryPassword = generatePassword(12);
-    console.log('Generated temporary password for:', email);
 
     // Create user account directly using admin client
-    console.log('Creating auth user...');
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: temporaryPassword,
@@ -287,10 +276,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Auth user created successfully:', authData.user.id);
-
+    console.log('Step 9: Creating user profile...');
     // Create profile directly
-    console.log('Creating user profile...');
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -307,7 +294,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Profile creation error:', profileError);
       // Clean up auth user if profile creation fails
       try {
-        console.log('Cleaning up auth user due to profile error...');
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       } catch (deleteError) {
         console.error('Failed to cleanup user after profile error:', deleteError);
@@ -324,10 +310,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Profile created successfully');
-
+    console.log('Step 10: Storing temporary credentials...');
     // Store temporary credentials
-    console.log('Storing temporary credentials...');
     const { error: credentialsError } = await supabaseAdmin
       .from('account_credentials')
       .insert({
@@ -341,7 +325,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Credentials storage error:', credentialsError);
       // Clean up on error
       try {
-        console.log('Cleaning up auth user due to credentials error...');
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       } catch (deleteError) {
         console.error('Failed to cleanup user after credentials error:', deleteError);
@@ -358,17 +341,13 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Credentials stored successfully');
-
-    // Initialize Resend client
-    console.log('Initializing Resend client...');
+    console.log('Step 11: Sending credentials email...');
+    // Initialize Resend client and send email
     const resend = new Resend(resendApiKey);
 
-    // Send credentials email using verified Resend domain
     try {
-      console.log('Sending credentials email...');
       const emailResponse = await resend.emails.send({
-        from: "HIPEMART OILS <onboarding@resend.dev>", // Using verified Resend domain
+        from: "HIPEMART OILS <onboarding@resend.dev>",
         to: [email],
         subject: `Your ${businessName} Account Has Been Created`,
         html: `
@@ -428,7 +407,6 @@ const handler = async (req: Request): Promise<Response> => {
         console.error("Email sending failed:", emailResponse.error);
         // Clean up created account if email fails
         try {
-          console.log('Cleaning up auth user due to email error...');
           await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
         } catch (deleteError) {
           console.error('Failed to cleanup user after email error:', deleteError);
@@ -445,6 +423,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
+      console.log("Step 12: Success! Account created and email sent");
       console.log("Account creation email sent successfully:", emailResponse.data);
 
       const successResponse = {
@@ -456,7 +435,6 @@ const handler = async (req: Request): Promise<Response> => {
       };
 
       console.log('=== Edge function completed successfully ===');
-      console.log('Response:', successResponse);
 
       return new Response(JSON.stringify(successResponse), {
         status: 200,
@@ -470,7 +448,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Email sending error:", emailError);
       // Clean up created account if email fails
       try {
-        console.log('Cleaning up auth user due to email error...');
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
       } catch (deleteError) {
         console.error('Failed to cleanup user after email error:', deleteError);
