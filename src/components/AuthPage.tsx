@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,19 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Fuel, Building2, Mail, AlertCircle, CheckCircle, RefreshCw, Users, Clock } from 'lucide-react';
+import { Fuel, Building2, Mail, AlertCircle, CheckCircle, RefreshCw, Users, Clock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AuthPage: React.FC = () => {
   const { signUp, signIn, signOut, error, clearError, loading, user, profile, refreshProfile } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [localError, setLocalError] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [setupTimeout, setSetupTimeout] = useState(false);
   const [setupProgress, setSetupProgress] = useState(0);
+  const [activeTab, setActiveTab] = useState('signin');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Handle setup timeout with progress indicator
   useEffect(() => {
@@ -33,7 +38,7 @@ export const AuthPage: React.FC = () => {
         });
       }, 500);
 
-      // Timeout after 8 seconds (reduced from 15)
+      // Timeout after 8 seconds
       const timeout = setTimeout(() => {
         setSetupTimeout(true);
         clearInterval(progressInterval);
@@ -217,6 +222,20 @@ export const AuthPage: React.FC = () => {
     );
   }
 
+  // Form validation helpers
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 6;
+  };
+
+  const validateFullName = (name: string) => {
+    return name.trim().length >= 2;
+  };
+
   // Clear errors when switching tabs or changing input
   const handleClearErrors = () => {
     setLocalError('');
@@ -224,41 +243,66 @@ export const AuthPage: React.FC = () => {
     clearError();
   };
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    handleClearErrors();
+    // Reset form fields when switching tabs
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setFullName('');
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     handleClearErrors();
     
-    if (!email || !password || !fullName) {
-      setLocalError('Please fill in all fields');
+    // Enhanced validation
+    if (!validateFullName(fullName)) {
+      setLocalError('Full name must be at least 2 characters long');
       return;
     }
 
-    if (password.length < 6) {
+    if (!validateEmail(email)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
+    if (!validatePassword(password)) {
       setLocalError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match');
       return;
     }
 
     setLocalLoading(true);
 
     try {
-      const { error } = await signUp(email, password, fullName);
+      const { error } = await signUp(email, password, fullName.trim());
       
       if (error) {
-        if (error.message.includes('already registered')) {
-          setLocalError('This email is already registered. Please sign in instead.');
+        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          setLocalError('This email is already registered. Please sign in instead or use a different email.');
         } else if (error.message.includes('weak password')) {
-          setLocalError('Password is too weak. Please choose a stronger password.');
+          setLocalError('Password is too weak. Please choose a stronger password with at least 6 characters.');
+        } else if (error.message.includes('invalid email')) {
+          setLocalError('Please enter a valid email address.');
         } else {
           setLocalError(error.message);
         }
       } else {
         setMessage('🎉 Account created successfully! Please check your email for a confirmation link to complete your registration.');
+        // Clear form on success
         setEmail('');
         setPassword('');
+        setConfirmPassword('');
         setFullName('');
       }
     } catch (error: any) {
-      setLocalError(error.message || 'An unexpected error occurred');
+      setLocalError(error.message || 'An unexpected error occurred during sign up');
     }
     
     setLocalLoading(false);
@@ -268,8 +312,14 @@ export const AuthPage: React.FC = () => {
     e.preventDefault();
     handleClearErrors();
     
-    if (!email || !password) {
-      setLocalError('Please fill in all fields');
+    // Enhanced validation
+    if (!validateEmail(email)) {
+      setLocalError('Please enter a valid email address');
+      return;
+    }
+
+    if (!password) {
+      setLocalError('Please enter your password');
       return;
     }
 
@@ -280,15 +330,17 @@ export const AuthPage: React.FC = () => {
       
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          setLocalError('Invalid email or password. Please check your credentials.');
+          setLocalError('Invalid email or password. Please check your credentials and try again.');
         } else if (error.message.includes('Email not confirmed')) {
           setLocalError('Please check your email and click the confirmation link before signing in.');
+        } else if (error.message.includes('too many requests')) {
+          setLocalError('Too many login attempts. Please wait a few minutes before trying again.');
         } else {
           setLocalError(error.message);
         }
       }
     } catch (error: any) {
-      setLocalError(error.message || 'An unexpected error occurred');
+      setLocalError(error.message || 'An unexpected error occurred during sign in');
     }
     
     setLocalLoading(false);
@@ -329,7 +381,7 @@ export const AuthPage: React.FC = () => {
         </CardHeader>
         
         <CardContent>
-          <Tabs defaultValue="signin" className="w-full" onValueChange={handleClearErrors}>
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -338,7 +390,7 @@ export const AuthPage: React.FC = () => {
             <TabsContent value="signin" className="space-y-4 mt-6">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
+                  <Label htmlFor="signin-email">Email Address</Label>
                   <Input
                     id="signin-email"
                     type="email"
@@ -347,28 +399,46 @@ export const AuthPage: React.FC = () => {
                       setEmail(e.target.value);
                       handleClearErrors();
                     }}
-                    placeholder="Enter your email"
+                    placeholder="Enter your email address"
                     className="border-2 border-orange-200 focus:border-orange-500"
                     disabled={isLoading}
                     autoComplete="email"
+                    required
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="signin-password">Password</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      handleClearErrors();
-                    }}
-                    placeholder="Enter your password"
-                    className="border-2 border-orange-200 focus:border-orange-500"
-                    disabled={isLoading}
-                    autoComplete="current-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signin-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        handleClearErrors();
+                      }}
+                      placeholder="Enter your password"
+                      className="border-2 border-orange-200 focus:border-orange-500 pr-12"
+                      disabled={isLoading}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 <Button 
@@ -397,11 +467,12 @@ export const AuthPage: React.FC = () => {
                     className="border-2 border-orange-200 focus:border-orange-500"
                     disabled={isLoading}
                     autoComplete="name"
+                    required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">Email Address</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -410,28 +481,80 @@ export const AuthPage: React.FC = () => {
                       setEmail(e.target.value);
                       handleClearErrors();
                     }}
-                    placeholder="Enter your email"
+                    placeholder="Enter your email address"
                     className="border-2 border-orange-200 focus:border-orange-500"
                     disabled={isLoading}
                     autoComplete="email"
+                    required
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      handleClearErrors();
-                    }}
-                    placeholder="Create a password (min 6 characters)"
-                    className="border-2 border-orange-200 focus:border-orange-500"
-                    disabled={isLoading}
-                    autoComplete="new-password"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        handleClearErrors();
+                      }}
+                      placeholder="Create a password (min 6 characters)"
+                      className="border-2 border-orange-200 focus:border-orange-500 pr-12"
+                      disabled={isLoading}
+                      autoComplete="new-password"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        handleClearErrors();
+                      }}
+                      placeholder="Confirm your password"
+                      className="border-2 border-orange-200 focus:border-orange-500 pr-12"
+                      disabled={isLoading}
+                      autoComplete="new-password"
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      disabled={isLoading}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-gray-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-gray-400" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 <Button 
@@ -439,7 +562,7 @@ export const AuthPage: React.FC = () => {
                   className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Creating Account...' : 'Sign Up'}
+                  {isLoading ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </form>
               
