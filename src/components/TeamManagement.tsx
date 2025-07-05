@@ -79,6 +79,7 @@ export const TeamManagement: React.FC = () => {
     setSuccess('');
 
     try {
+      console.log('=== Account Creation Debug Start ===');
       console.log('Step 1: Checking Supabase connection...');
       
       // Test basic Supabase connectivity first
@@ -139,7 +140,10 @@ export const TeamManagement: React.FC = () => {
 
       const { data, error: functionError } = functionResponse as any;
       
-      console.log('Step 6: Edge Function response received:', { data, error: functionError });
+      console.log('Step 6: Edge Function response received:');
+      console.log('- Response data:', JSON.stringify(data, null, 2));
+      console.log('- Response error:', JSON.stringify(functionError, null, 2));
+      console.log('- Response type:', typeof functionResponse);
 
       if (functionError) {
         console.error('Edge Function error details:', {
@@ -206,10 +210,13 @@ export const TeamManagement: React.FC = () => {
 
     } catch (error: any) {
       console.error('=== Account creation error ===');
+      console.error('Error type:', typeof error);
+      console.error('Error object:', error);
       console.error('Error details:', {
         message: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
+        cause: error.cause
       });
       
       let displayError = error.message || 'An unexpected error occurred';
