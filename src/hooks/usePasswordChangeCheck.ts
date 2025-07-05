@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { User } from '@supabase/supabase-js';
 
-export const usePasswordChangeCheck = () => {
-  const { user } = useAuth();
+export const usePasswordChangeCheck = (user: User | null) => {
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
   const [loading, setLoading] = useState(true);
 

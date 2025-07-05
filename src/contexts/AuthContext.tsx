@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     needsPasswordChange,
     loading: passwordCheckLoading,
     markPasswordChanged
-  } = usePasswordChangeCheck();
+  } = usePasswordChangeCheck(user);
 
   const loading = authLoading || profileLoading || passwordCheckLoading;
   const error = profileError;
