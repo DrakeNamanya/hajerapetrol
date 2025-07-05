@@ -217,8 +217,26 @@ export const TeamManagement: React.FC = () => {
       
       let displayError = error.message || 'An unexpected error occurred';
       
-      // Handle common network errors
-      if (displayError.includes('Failed to fetch') || displayError.includes('NetworkError')) {
+      // Handle specific error types
+      if (displayError.includes('You can only send testing emails to your own email address')) {
+        displayError = `⚠️ Email Service Limitation: The system can currently only send emails to verified addresses.
+
+🔧 Solutions:
+1. For testing: Use the email "drnamanya@gmail.com" 
+2. For production: Verify your domain at resend.com/domains
+3. Contact system administrator to configure email domain
+
+The account creation process works, but email sending is restricted in testing mode.`;
+      } else if (displayError.includes('Failed to send credentials email')) {
+        displayError = `📧 Email Delivery Failed: ${displayError}
+
+Please check:
+• Email service configuration
+• Domain verification at resend.com/domains
+• Network connectivity
+
+The user account may have been created but credentials email was not sent.`;
+      } else if (displayError.includes('Failed to fetch') || displayError.includes('NetworkError')) {
         displayError = 'Network error. Please check your internet connection and try again.';
       } else if (displayError.includes('timeout') || displayError.includes('timed out')) {
         displayError = 'Request timed out. Please check your internet connection and try again.';
