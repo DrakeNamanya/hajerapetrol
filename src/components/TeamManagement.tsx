@@ -171,6 +171,12 @@ export const TeamManagement: React.FC = () => {
         throw new Error(`Account creation failed: ${errorMsg}`);
       }
 
+      // Check if data contains error information
+      if (data && !data.success && data.error) {
+        console.error('Edge Function data error:', data.error);
+        throw new Error(`Account creation failed: ${data.error}`);
+      }
+
       if (!data) {
         console.error('No data returned from Edge Function');
         throw new Error('Account creation failed - no response from server. Please try again.');
