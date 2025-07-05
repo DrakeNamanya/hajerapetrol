@@ -80,12 +80,13 @@ export const ConnectionTest: React.FC = () => {
         });
         
         // We expect an error here (missing fields), but if we get one, it means the function is reachable
-        if (response.error && response.error.message?.includes('Missing required fields')) {
+        const errorMessage = response.error?.message || response.data?.error;
+        if (errorMessage?.includes('Missing required fields')) {
           setResults(prev => ({ ...prev, edgeFunction: 'success' }));
           details.push('Edge Function: Reachable (validation working)');
-        } else if (response.error) {
+        } else if (response.error || response.data?.error) {
           setResults(prev => ({ ...prev, edgeFunction: 'error' }));
-          details.push(`Edge Function Error: ${response.error.message}`);
+          details.push(`Edge Function Error: ${errorMessage}`);
         } else {
           setResults(prev => ({ ...prev, edgeFunction: 'success' }));
           details.push('Edge Function: Reachable');
