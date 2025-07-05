@@ -116,7 +116,7 @@ export const TeamManagement: React.FC = () => {
         businessName: 'HIPEMART OILS'
       };
       
-      console.log('Step 4: Request payload prepared:', requestPayload);
+      console.log('Step 4: Request payload prepared:', JSON.stringify(requestPayload, null, 2));
       
       // Create a promise that rejects after 30 seconds
       const timeoutPromise = new Promise((_, reject) => {
@@ -128,11 +128,7 @@ export const TeamManagement: React.FC = () => {
       console.log('Step 5: Calling Edge Function with 30 second timeout...');
       
       const functionCallPromise = supabase.functions.invoke('create-team-account', {
-        body: requestPayload,
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
+        body: requestPayload
       });
 
       // Race between the function call and timeout
