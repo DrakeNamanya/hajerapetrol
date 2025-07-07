@@ -249,7 +249,7 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
       return {
         department: dept.charAt(0).toUpperCase() + dept.slice(1),
         revenue,
-        growth: Math.random() * 20, // Mock growth for demo
+        growth: revenue > 0 ? Math.round((revenue / 1000000) * 5 + 2) : 0, // Stable growth based on revenue
         transactions: deptSales.length,
         avgTicket: deptSales.length > 0 ? revenue / deptSales.length : 0
       };
