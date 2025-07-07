@@ -347,7 +347,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const emailResponse = await resend.emails.send({
-        from: "HIPEMART OILS <noreply@hipemartoils.com>",
+        from: "HIPEMART OILS <noreply@noreply.hipemartoils.com>",
         to: [email],
         subject: `Your ${businessName} Account Has Been Created`,
         html: `
