@@ -405,6 +405,22 @@ const handler = async (req: Request): Promise<Response> => {
 
       if (emailResponse.error) {
         console.error("Email sending failed:", emailResponse.error);
+        console.error("Full email response:", JSON.stringify(emailResponse, null, 2));
+        
+        // Check for specific Resend errors
+        let errorMessage = `Failed to send credentials email: ${emailResponse.error.message}`;
+        
+        if (emailResponse.error.message?.includes('can only send testing emails to your own email address')) {
+          errorMessage = `Email restriction: Resend is in sandbox mode. You can only send emails to verified addresses.
+
+Solutions:
+1. For testing: Use drnamanya@gmail.com 
+2. Move to production: Add billing information at resend.com/settings/billing
+3. Verify recipient emails individually at resend.com/audiences
+
+Your domain ${email.split('@')[1]} is verified, but Resend requires a paid plan to send to unverified recipients.`;
+        }
+        
         // Clean up created account if email fails
         try {
           await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
@@ -414,7 +430,7 @@ const handler = async (req: Request): Promise<Response> => {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: `Failed to send credentials email: ${emailResponse.error.message}` 
+            error: errorMessage
           }), 
           { 
             status: 500, 
