@@ -30,7 +30,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Sending invitation email to:', email);
 
     const emailResponse = await resend.emails.send({
-      from: "HIPEMART OILS <noreply@datacollectorslimited.com>",
+      from: "HIPEMART OILS <noreply@hipemartoils.com>",
       to: [email],
       subject: `Invitation to join ${businessName} POS System`,
       html: `
