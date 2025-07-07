@@ -410,15 +410,16 @@ const handler = async (req: Request): Promise<Response> => {
         // Check for specific Resend errors
         let errorMessage = `Failed to send credentials email: ${emailResponse.error.message}`;
         
-        if (emailResponse.error.message?.includes('can only send testing emails to your own email address')) {
-          errorMessage = `Email restriction: Resend is in sandbox mode. You can only send emails to verified addresses.
+        if (emailResponse.error.message?.includes('You can only send testing emails to your own email address')) {
+          errorMessage = `🚫 Resend Sandbox Limitation
 
-Solutions:
-1. For testing: Use drnamanya@gmail.com 
-2. Move to production: Add billing information at resend.com/settings/billing
-3. Verify recipient emails individually at resend.com/audiences
+You can only send emails to: drnamanya@gmail.com
 
-Your domain ${email.split('@')[1]} is verified, but Resend requires a paid plan to send to unverified recipients.`;
+To send to other emails, you need to:
+1. Verify your domain at resend.com/domains 
+2. Upgrade to a paid plan at resend.com/settings/billing
+
+For testing, please use: drnamanya@gmail.com`;
         }
         
         // Clean up created account if email fails
