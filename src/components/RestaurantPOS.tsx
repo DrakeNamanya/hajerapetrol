@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Minus, Trash2, DollarSign, Clock, Users, ShoppingCart, Receipt, CreditCard, Banknote, Settings } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { MenuManager } from "./MenuManager";
+import { useSales } from "@/hooks/useSales";
 
 interface MenuItem {
   id: string;
@@ -22,6 +23,7 @@ interface RestaurantPOSProps {
 }
 
 export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) => {
+  const { createSale, isCreatingSale } = useSales();
   const [currentOrder, setCurrentOrder] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('Main Course');
   const [orders, setOrders] = useState([]);
@@ -126,31 +128,30 @@ export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) =>
       status: 'completed'
     };
 
-    // Record sale for approval system
-    const sale = {
-      id: Date.now(),
-      department: 'restaurant',
-      type: 'restaurant_sale',
-      customer: customerName || 'Walk-in Customer',
-      tableNumber: tableNumber || 'N/A',
+    // Save sale to database using useSales hook
+    const saleData = {
+      department: 'restaurant' as const,
+      sale_type: 'restaurant_sale',
+      customer_name: customerName || 'Walk-in Customer',
+      table_number: tableNumber || 'N/A',
       items: currentOrder.map(item => ({
         name: item.name,
         quantity: item.quantity,
         price: item.price,
-        total: item.price * item.quantity,
-        category: item.category
+        total: item.price * item.quantity
       })),
       subtotal: subtotal,
       tax: tax,
       total: total,
-      paymentMethod,
-      amountReceived: newOrder.amountReceived,
-      change: newOrder.change,
-      timestamp: new Date(),
-      status: 'pending'
+      payment_method: paymentMethod,
+      amount_received: newOrder.amountReceived,
+      change_amount: newOrder.change
     };
 
-    onSaleRecord(sale);
+    // Save to database
+    createSale(saleData);
+
+    // Update local state for receipts
     setOrders([newOrder, ...orders]);
     setCurrentReceipt(newOrder);
     setShowReceipt(true);
@@ -163,7 +164,7 @@ export const RestaurantPOS: React.FC<RestaurantPOSProps> = ({ onSaleRecord }) =>
 
     toast({
       title: "Order Processed",
-      description: `Restaurant order of ${formatCurrency(total)} processed successfully`,
+      description: `Restaurant order of ${formatCurrency(total)} processed and saved to database`,
     });
   };
 
