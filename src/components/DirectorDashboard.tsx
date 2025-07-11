@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/hooks/use-toast";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp, TrendingDown, DollarSign, Users, ShoppingCart, Fuel, Building2, UtensilsCrossed, AlertTriangle, CheckCircle, Settings, UserPlus, Edit, FileText, UserX, UserCheck } from 'lucide-react';
+import { PurchaseOrderManager } from './PurchaseOrderManager';
+import { ApprovalReminderManager } from './ApprovalReminderManager';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
@@ -413,11 +415,12 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="profit-loss">Profit & Loss</TabsTrigger>
           <TabsTrigger value="expenses">Expenses</TabsTrigger>
+          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="reports">Real Reports</TabsTrigger>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="settings">Business Settings</TabsTrigger>
@@ -831,6 +834,13 @@ export const DirectorDashboard: React.FC<DirectorDashboardProps> = ({ sales }) =
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="purchase-orders" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PurchaseOrderManager userRole="director" />
+            <ApprovalReminderManager />
+          </div>
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">

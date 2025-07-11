@@ -10,6 +10,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { ExpenseTracker } from './ExpenseTracker';
 import { useSales } from '@/hooks/useSales';
+import { PurchaseOrderManager } from './PurchaseOrderManager';
 
 interface Expense {
   id: number;
@@ -52,6 +53,18 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
       status: 'accountant_approved',
       approvalType: 'accountant'
     });
+  };
+
+  const handleRejectSale = (saleId: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+      updateSaleStatus({
+        saleId,
+        status: 'rejected',
+        approvalType: 'accountant',
+        rejectionReason: reason
+      });
+    }
   };
 
   const formatSaleItems = (items: any) => {
@@ -98,9 +111,10 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="sales">Sales Approval</TabsTrigger>
           <TabsTrigger value="expenses">Expense Records</TabsTrigger>
+          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="reports">Sales Reports</TabsTrigger>
         </TabsList>
 
@@ -184,13 +198,23 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
                         </div>
                       </div>
 
-                      <Button 
-                        onClick={() => handleApproveSale(sale.id)}
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        disabled={isUpdatingSale}
-                      >
-                        {isUpdatingSale ? 'Processing...' : 'Approve & Send to Manager'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleApproveSale(sale.id)}
+                          className="flex-1 bg-blue-600 hover:bg-blue-700"
+                          disabled={isUpdatingSale}
+                        >
+                          {isUpdatingSale ? 'Processing...' : 'Approve'}
+                        </Button>
+                        <Button 
+                          onClick={() => handleRejectSale(sale.id)}
+                          variant="destructive"
+                          className="flex-1"
+                          disabled={isUpdatingSale}
+                        >
+                          Reject
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -236,41 +260,14 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
             </CardContent>
           </Card>
 
-          {pendingExpenses.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Expenses from Manager ({pendingExpenses.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {pendingExpenses.map(expense => (
-                    <div key={expense.id} className="border rounded-lg p-4 bg-yellow-50">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge className={getDepartmentColor(expense.department)}>
-                              {expense.department.toUpperCase()}
-                            </Badge>
-                            <Badge variant="secondary">{expense.type}</Badge>
-                          </div>
-                          <p className="font-medium">{expense.description}</p>
-                          <p className="text-sm text-gray-600">{expense.timestamp.toLocaleString()}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-red-600">UGX {expense.amount.toLocaleString()}</p>
-                          <Badge variant="secondary">Awaiting Approval</Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         <TabsContent value="expenses" className="space-y-6">
           <ExpenseTracker userRole="accountant" />
+        </TabsContent>
+
+        <TabsContent value="purchase-orders" className="space-y-6">
+          <PurchaseOrderManager userRole="accountant" />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">

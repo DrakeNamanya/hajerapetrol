@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Fuel, AlertTriangle, CheckCircle, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { PurchaseOrderManager } from './PurchaseOrderManager';
 import type { User } from '@supabase/supabase-js';
 
 interface Sale {
@@ -447,6 +448,10 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="purchase-orders" className="space-y-6">
+          <PurchaseOrderManager userRole="manager" />
         </TabsContent>
 
         <TabsContent value="fuel" className="space-y-6">

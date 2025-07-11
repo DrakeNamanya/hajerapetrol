@@ -33,6 +33,18 @@ export const ManagerApprovalDashboard: React.FC = () => {
     });
   };
 
+  const handleRejectSale = (saleId: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+      updateSaleStatus({
+        saleId,
+        status: 'rejected',
+        approvalType: 'manager',
+        rejectionReason: reason
+      });
+    }
+  };
+
   const formatSaleItems = (items: any) => {
     if (!Array.isArray(items)) return [];
     return items;
@@ -181,13 +193,23 @@ export const ManagerApprovalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <Button 
-                        onClick={() => handleApproveSale(sale.id)}
-                        className="w-full bg-green-600 hover:bg-green-700"
-                        disabled={isUpdatingSale}
-                      >
-                        {isUpdatingSale ? 'Processing...' : 'Give Final Approval'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleApproveSale(sale.id)}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          disabled={isUpdatingSale}
+                        >
+                          {isUpdatingSale ? 'Processing...' : 'Approve'}
+                        </Button>
+                        <Button 
+                          onClick={() => handleRejectSale(sale.id)}
+                          variant="destructive"
+                          className="flex-1"
+                          disabled={isUpdatingSale}
+                        >
+                          Reject
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

@@ -20,6 +20,7 @@ interface Expense {
   department: string;
   status: string;
   created_at: string;
+  requested_by: string;
   rejection_reason?: string;
 }
 
@@ -237,6 +238,9 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
   };
 
   const canApprove = (expense: Expense) => {
+    // Users cannot approve their own expenses
+    if (currentUser && expense.requested_by === currentUser.id) return false;
+    
     if (userRole === 'accountant' && expense.status === 'pending') return true;
     if (userRole === 'manager' && expense.status === 'accountant_approved') return true;
     if (userRole === 'director' && expense.status === 'manager_approved') return true;

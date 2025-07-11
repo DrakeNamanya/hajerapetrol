@@ -27,6 +27,13 @@ export interface CreateSaleData {
   change_amount?: number;
 }
 
+interface UpdateSaleStatusParams {
+  saleId: string;
+  status: string;
+  approvalType: 'accountant' | 'manager';
+  rejectionReason?: string;
+}
+
 export const useSales = () => {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
@@ -192,22 +199,28 @@ export const useSales = () => {
     mutationFn: async ({ 
       saleId, 
       status, 
-      approvalType 
-    }: { 
-      saleId: string; 
-      status: string; 
-      approvalType: 'accountant' | 'manager' 
-    }) => {
+      approvalType,
+      rejectionReason
+    }: UpdateSaleStatusParams) => {
       if (!user) throw new Error('User not authenticated');
 
-      const updateData: any = { status };
-      
-      if (approvalType === 'accountant') {
-        updateData.approved_by_accountant = user.id;
-        updateData.accountant_approved_at = new Date().toISOString();
-      } else {
-        updateData.approved_by_manager = user.id;
-        updateData.manager_approved_at = new Date().toISOString();
+      const updateData: any = {
+        status,
+        updated_at: new Date().toISOString()
+      };
+
+      if (rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+      }
+
+      if (status !== 'rejected') {
+        if (approvalType === 'accountant') {
+          updateData.approved_by_accountant = user.id;
+          updateData.accountant_approved_at = new Date().toISOString();
+        } else if (approvalType === 'manager') {
+          updateData.approved_by_manager = user.id;
+          updateData.manager_approved_at = new Date().toISOString();
+        }
       }
 
       const { data, error } = await supabase
