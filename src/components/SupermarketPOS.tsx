@@ -277,23 +277,33 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     };
 
     // Save to database using the new sales hook
-    const saleData = {
-      department: 'supermarket' as const,
-      sale_type: 'grocery_sale',
-      customer_name: 'Walk-in Customer',
-      items: cart.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-        total: item.total
-      })),
-      subtotal,
-      tax,
-      total,
-      payment_method: paymentMethod,
-    };
+    try {
+      const saleData = {
+        department: 'supermarket' as const,
+        sale_type: 'grocery_sale',
+        customer_name: 'Walk-in Customer',
+        items: cart.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total
+        })),
+        subtotal,
+        tax,
+        total,
+        payment_method: paymentMethod,
+      };
 
-    createSale(saleData);
+      createSale(saleData);
+    } catch (error) {
+      console.error('Error creating sale:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save sale to database",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Save receipt
     const receiptSaved = await saveReceipt(receiptData);
