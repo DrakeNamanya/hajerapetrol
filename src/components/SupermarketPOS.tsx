@@ -360,11 +360,27 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
 
   const getTodaysSales = () => {
     const today = new Date().toDateString();
-    return sales.filter(sale => new Date(sale.created_at).toDateString() === today);
+    const todaysSales = sales.filter(sale => new Date(sale.created_at).toDateString() === today);
+    
+    console.log('Debug - Today\'s date:', today);
+    console.log('Debug - All sales:', sales.length, 'sales total');
+    console.log('Debug - Today\'s sales:', todaysSales.length, 'sales found');
+    if (sales.length > 0) {
+      console.log('Debug - All sales dates:', sales.map(sale => ({
+        id: sale.id,
+        date: new Date(sale.created_at).toDateString(),
+        total: sale.total
+      })));
+    }
+    
+    return todaysSales;
   };
 
   const getDailyTotal = () => {
-    return getTodaysSales().reduce((total, sale) => total + Number(sale.total), 0);
+    const todaysSales = getTodaysSales();
+    const total = todaysSales.reduce((total, sale) => total + Number(sale.total), 0);
+    console.log('Debug - Daily total calculated:', total);
+    return total;
   };
 
   const submitDailySales = () => {
@@ -581,57 +597,64 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
 
 
           {/* Daily Sales Summary */}
-          {sales.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Daily Sales Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Today's Total Sales:</span>
-                    <span className="text-lg font-bold text-green-600">
-                      UGX {getDailyTotal().toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Number of Sales:</span>
-                    <span>{getTodaysSales().length}</span>
-                  </div>
-                  
-                  {!dailySalesSubmitted ? (
-                    <Button 
-                      onClick={submitDailySales}
-                      className="w-full bg-blue-600 hover:bg-blue-700"
-                      disabled={getTodaysSales().length === 0}
-                    >
-                      Submit Daily Sales to Accountant
-                    </Button>
-                  ) : (
-                    <div className="space-y-2">
-                      <p className="text-green-600 font-medium text-center">
-                        ✓ Daily sales submitted on {submissionDate?.toLocaleDateString()} at {submissionDate?.toLocaleTimeString()}
-                      </p>
-                      <p className="text-sm text-gray-600 text-center">
-                        Waiting for accountant approval
-                      </p>
-                      <Button 
-                        onClick={resetDailySubmission}
-                        variant="outline"
-                        className="w-full"
-                        size="sm"
-                      >
-                        Reset Submission
-                      </Button>
-                    </div>
-                  )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Daily Sales Summary ({new Date().toLocaleDateString()})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Today's Total Sales:</span>
+                  <span className="text-lg font-bold text-green-600">
+                    UGX {getDailyTotal().toLocaleString()}
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Number of Sales:</span>
+                  <span>{getTodaysSales().length}</span>
+                </div>
+                
+                {getTodaysSales().length === 0 && sales.length > 0 && (
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      📊 Found {sales.length} total sales in database, but none from today. 
+                      Complete some sales to see them appear here.
+                    </p>
+                  </div>
+                )}
+                
+                {!dailySalesSubmitted ? (
+                  <Button 
+                    onClick={submitDailySales}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    disabled={getTodaysSales().length === 0}
+                  >
+                    Submit Daily Sales to Accountant
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-green-600 font-medium text-center">
+                      ✓ Daily sales submitted on {submissionDate?.toLocaleDateString()} at {submissionDate?.toLocaleTimeString()}
+                    </p>
+                    <p className="text-sm text-gray-600 text-center">
+                      Waiting for accountant approval
+                    </p>
+                    <Button 
+                      onClick={resetDailySubmission}
+                      variant="outline"
+                      className="w-full"
+                      size="sm"
+                    >
+                      Reset Submission
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="inventory" className="space-y-4">
