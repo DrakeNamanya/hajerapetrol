@@ -621,15 +621,15 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Today's Total Sales:</span>
                   <span className="text-lg font-bold text-green-600">
-                    UGX {getDailyTotal().toLocaleString()}
+                    UGX {dbSalesSummary.totalSales.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Number of Sales:</span>
-                  <span>{getTodaysSales().length}</span>
+                  <span>{dbSalesSummary.salesCount}</span>
                 </div>
                 
-                {getTodaysSales().length === 0 && sales.length > 0 && (
+                {dbSalesSummary.salesCount === 0 && sales.length > 0 && (
                   <div className="bg-blue-50 p-3 rounded-lg">
                     <p className="text-sm text-blue-700">
                       📊 Found {sales.length} total sales in database, but none from today. 
@@ -638,14 +638,27 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
                   </div>
                 )}
                 
-                {!dailySalesSubmitted ? (
-                  <Button 
-                    onClick={submitDailySales}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                    disabled={getTodaysSales().length === 0}
-                  >
-                    Submit Daily Sales to Accountant
-                  </Button>
+                {dbSalesSummary.salesCount > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>📈 Pending Sales:</span>
+                      <span className="font-medium">{dbSalesSummary.pendingSales}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>✅ Approved Sales:</span>
+                      <span className="font-medium">{dbSalesSummary.approvedSales}</span>
+                    </div>
+                  </div>
+                )}
+                
+                 {!dailySalesSubmitted ? (
+                   <Button 
+                     onClick={submitDailySales}
+                     className="w-full bg-blue-600 hover:bg-blue-700"
+                     disabled={dbSalesSummary.salesCount === 0}
+                   >
+                     Submit Daily Sales to Accountant
+                   </Button>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-green-600 font-medium text-center">
