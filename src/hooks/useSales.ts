@@ -142,35 +142,46 @@ export const useSales = () => {
   // Create a new sale
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: CreateSaleData) => {
-      console.log('Creating sale:', saleData);
+      console.log('Creating sale with data:', saleData);
+      console.log('Current user info:', { id: user?.id, email: user?.email });
+      console.log('Current profile info:', { role: profile?.role, department: profile?.department });
       
       if (!user) {
         console.error('Cannot create sale - user not authenticated');
         throw new Error('User not authenticated');
       }
 
+      const salePayload = {
+        department: saleData.department,
+        sale_type: saleData.sale_type,
+        customer_name: saleData.customer_name,
+        table_number: saleData.table_number,
+        pump_number: saleData.pump_number,
+        items: saleData.items as any, // Cast to Json type
+        subtotal: saleData.subtotal,
+        tax: saleData.tax,
+        total: saleData.total,
+        payment_method: saleData.payment_method,
+        amount_received: saleData.amount_received,
+        change_amount: saleData.change_amount,
+        created_by: user.id,
+      };
+
+      console.log('Final payload being sent to Supabase:', salePayload);
+
       const { data, error } = await supabase
         .from('sales')
-        .insert({
-          department: saleData.department,
-          sale_type: saleData.sale_type,
-          customer_name: saleData.customer_name,
-          table_number: saleData.table_number,
-          pump_number: saleData.pump_number,
-          items: saleData.items as any, // Cast to Json type
-          subtotal: saleData.subtotal,
-          tax: saleData.tax,
-          total: saleData.total,
-          payment_method: saleData.payment_method,
-          amount_received: saleData.amount_received,
-          change_amount: saleData.change_amount,
-          created_by: user.id,
-        })
+        .insert(salePayload)
         .select()
         .single();
 
       if (error) {
-        console.error('Error creating sale:', error);
+        console.error('Supabase error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
         throw error;
       }
 
