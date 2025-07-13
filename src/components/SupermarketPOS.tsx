@@ -629,11 +629,10 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
                   <span>{dbSalesSummary.salesCount}</span>
                 </div>
                 
-                {dbSalesSummary.salesCount === 0 && sales.length > 0 && (
+                {dbSalesSummary.salesCount === 0 && (
                   <div className="bg-blue-50 p-3 rounded-lg">
                     <p className="text-sm text-blue-700">
-                      📊 Found {sales.length} total sales in database, but none from today. 
-                      Complete some sales to see them appear here.
+                      📊 No sales completed today yet. Complete some sales to see them appear here.
                     </p>
                   </div>
                 )}
