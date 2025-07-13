@@ -142,9 +142,11 @@ export const useSales = () => {
   // Create a new sale
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: CreateSaleData) => {
+      console.log('=== STARTING SALE CREATION ===');
       console.log('Creating sale with data:', saleData);
       console.log('Current user info:', { id: user?.id, email: user?.email });
       console.log('Current profile info:', { role: profile?.role, department: profile?.department });
+      console.log('Current timestamp:', new Date().toISOString());
       
       if (!user) {
         console.error('Cannot create sale - user not authenticated');
