@@ -579,36 +579,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                Database Sales Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-green-50 p-4 rounded-lg mb-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex justify-between">
-                    <span>Today's Sales:</span>
-                    <span className="text-green-600 font-semibold">UGX {dbSalesSummary.totalSales.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Transactions:</span>
-                    <span className="font-semibold">{dbSalesSummary.salesCount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Pending:</span>
-                    <Badge variant="secondary">{dbSalesSummary.pendingSales}</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Approved:</span>
-                    <Badge variant="default">{dbSalesSummary.approvedSales}</Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Daily Sales Summary */}
           {sales.length > 0 && (
