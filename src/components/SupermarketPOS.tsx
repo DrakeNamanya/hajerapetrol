@@ -277,33 +277,23 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     };
 
     // Save to database using the new sales hook
-    try {
-      const saleData = {
-        department: 'supermarket' as const,
-        sale_type: 'grocery_sale',
-        customer_name: 'Walk-in Customer',
-        items: cart.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          total: item.total
-        })),
-        subtotal,
-        tax,
-        total,
-        payment_method: paymentMethod,
-      };
+    const saleData = {
+      department: 'supermarket' as const,
+      sale_type: 'grocery_sale',
+      customer_name: 'Walk-in Customer',
+      items: cart.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.total
+      })),
+      subtotal,
+      tax,
+      total,
+      payment_method: paymentMethod,
+    };
 
-      createSale(saleData);
-    } catch (error) {
-      console.error('Error creating sale:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save sale to database",
-        variant: "destructive",
-      });
-      return;
-    }
+    createSale(saleData);
 
     // Save receipt
     const receiptSaved = await saveReceipt(receiptData);
@@ -422,11 +412,10 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="sales">Sales</TabsTrigger>
           <TabsTrigger value="inventory">Inventory</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="database">Database</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="space-y-4">
@@ -834,49 +823,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
           </Card>
         </TabsContent>
 
-        <TabsContent value="database" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                Recent Sales from Database
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sales.slice(0, 10).map(sale => (
-                    <TableRow key={sale.id}>
-                      <TableCell>{new Date(sale.created_at).toLocaleTimeString()}</TableCell>
-                      <TableCell>{sale.customer_name || 'Walk-in'}</TableCell>
-                      <TableCell>{Array.isArray(sale.items) ? sale.items.length : 0} items</TableCell>
-                      <TableCell>UGX {Number(sale.total).toLocaleString()}</TableCell>
-                      <TableCell>{sale.payment_method}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={sale.status === 'approved' ? 'default' : 
-                                   sale.status === 'pending' ? 'secondary' : 'destructive'}
-                        >
-                          {sale.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
 
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
