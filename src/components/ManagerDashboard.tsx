@@ -77,7 +77,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
-        .eq('status', 'accountant_approved')
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -204,16 +204,17 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
     };
   });
 
-  const pendingExpenses = expenses.filter(expense => expense.status === 'accountant_approved');
+  const pendingExpenses = expenses.filter(expense => expense.status === 'pending');
   const approvedExpenses = expenses.filter(expense => expense.status === 'manager_approved');
 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sales">Sales Approval</TabsTrigger>
           <TabsTrigger value="expenses">Expense Approval</TabsTrigger>
+          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="fuel">Fuel Verification</TabsTrigger>
         </TabsList>
 
