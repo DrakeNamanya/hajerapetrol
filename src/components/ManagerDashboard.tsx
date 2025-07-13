@@ -546,6 +546,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
             </CardContent>
           </Card>
         </TabsContent>
+
       </Tabs>
     </div>
   );

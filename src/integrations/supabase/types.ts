@@ -331,6 +331,57 @@ export type Database = {
           },
         ]
       }
+      purchase_order_requests: {
+        Row: {
+          amount: number
+          approved_by_director: string | null
+          approved_by_manager: string | null
+          created_at: string
+          department: string
+          description: string
+          director_approved_at: string | null
+          id: string
+          manager_approved_at: string | null
+          rejection_reason: string | null
+          requested_by: string
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_by_director?: string | null
+          approved_by_manager?: string | null
+          created_at?: string
+          department: string
+          description: string
+          director_approved_at?: string | null
+          id?: string
+          manager_approved_at?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          status?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_by_director?: string | null
+          approved_by_manager?: string | null
+          created_at?: string
+          department?: string
+          description?: string
+          director_approved_at?: string | null
+          id?: string
+          manager_approved_at?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       purchase_orders: {
         Row: {
           approved_at: string | null

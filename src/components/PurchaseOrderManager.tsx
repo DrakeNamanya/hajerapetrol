@@ -59,9 +59,8 @@ export const PurchaseOrderManager: React.FC<PurchaseOrderManagerProps> = ({ user
   const fetchRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('expenses')
+        .from('purchase_order_requests')
         .select('*')
-        .eq('type', 'purchase_order_request')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -98,9 +97,9 @@ export const PurchaseOrderManager: React.FC<PurchaseOrderManagerProps> = ({ user
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('expenses')
+        .from('purchase_order_requests')
         .insert({
-          type: 'purchase_order_request',
+          type: newRequest.type,
           description: `${newRequest.description}\n\nJustification: ${newRequest.justification}`,
           amount: parseFloat(newRequest.amount),
           department: newRequest.department,
@@ -164,7 +163,7 @@ export const PurchaseOrderManager: React.FC<PurchaseOrderManagerProps> = ({ user
       }
 
       const { error } = await supabase
-        .from('expenses')
+        .from('purchase_order_requests')
         .update(updateData)
         .eq('id', requestId);
 
