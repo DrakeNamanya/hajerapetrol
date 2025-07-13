@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Building2, ShoppingCart, Plus, Minus, Package, AlertTriangle, TrendingUp, TrendingDown, Clock, BarChart3, Receipt, Database } from 'lucide-react';
+import { Building2, ShoppingCart, Plus, Minus, Package, AlertTriangle, TrendingUp, TrendingDown, Clock, BarChart3, Receipt, Database, DollarSign } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -69,6 +69,8 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const [dailySales, setDailySales] = useState<Sale[]>([]);
   const [salesSubmitted, setSalesSubmitted] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [dailySalesSubmitted, setDailySalesSubmitted] = useState(false);
+  const [submissionDate, setSubmissionDate] = useState<Date | null>(null);
   
   // Stock management form state
   const [stockForm, setStockForm] = useState({
@@ -356,8 +358,18 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     });
   };
 
+  const getTodaysSales = () => {
+    const today = new Date().toDateString();
+    return sales.filter(sale => new Date(sale.created_at).toDateString() === today);
+  };
+
+  const getDailyTotal = () => {
+    return getTodaysSales().reduce((total, sale) => total + Number(sale.total), 0);
+  };
+
   const submitDailySales = () => {
-    if (dailySales.length === 0) {
+    const todaysSales = getTodaysSales();
+    if (todaysSales.length === 0) {
       toast({
         title: "No Sales",
         description: "No sales to submit today",
@@ -366,13 +378,18 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       return;
     }
 
-    setSalesSubmitted(true);
-    setApprovalStatus('pending');
+    setDailySalesSubmitted(true);
+    setSubmissionDate(new Date());
     
     toast({
-      title: "Sales Submitted",
+      title: "Daily Sales Submitted",
       description: "Daily sales have been submitted to accountant for approval",
     });
+  };
+
+  const resetDailySubmission = () => {
+    setDailySalesSubmitted(false);
+    setSubmissionDate(null);
   };
 
   const filteredProducts = products.filter(product =>
@@ -592,6 +609,59 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
               </div>
             </CardContent>
           </Card>
+
+          {/* Daily Sales Summary */}
+          {sales.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Daily Sales Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Today's Total Sales:</span>
+                    <span className="text-lg font-bold text-green-600">
+                      UGX {getDailyTotal().toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Number of Sales:</span>
+                    <span>{getTodaysSales().length}</span>
+                  </div>
+                  
+                  {!dailySalesSubmitted ? (
+                    <Button 
+                      onClick={submitDailySales}
+                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      disabled={getTodaysSales().length === 0}
+                    >
+                      Submit Daily Sales to Accountant
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-green-600 font-medium text-center">
+                        ✓ Daily sales submitted on {submissionDate?.toLocaleDateString()} at {submissionDate?.toLocaleTimeString()}
+                      </p>
+                      <p className="text-sm text-gray-600 text-center">
+                        Waiting for accountant approval
+                      </p>
+                      <Button 
+                        onClick={resetDailySubmission}
+                        variant="outline"
+                        className="w-full"
+                        size="sm"
+                      >
+                        Reset Submission
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="inventory" className="space-y-4">
