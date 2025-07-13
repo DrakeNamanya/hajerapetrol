@@ -295,7 +295,19 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       payment_method: paymentMethod,
     };
 
-    createSale(saleData);
+    try {
+      console.log('About to call createSale with data:', saleData);
+      createSale(saleData);
+      console.log('createSale called successfully');
+    } catch (error) {
+      console.error('Error calling createSale:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save sale to database",
+        variant: "destructive",
+      });
+      return; // Don't proceed if sale creation fails
+    }
 
     // Save receipt
     const receiptSaved = await saveReceipt(receiptData);
