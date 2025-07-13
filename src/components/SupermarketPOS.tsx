@@ -66,7 +66,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   const [paymentMethod, setPaymentMethod] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState<any>(null);
-  const [dailySales, setDailySales] = useState<Sale[]>([]);
   const [salesSubmitted, setSalesSubmitted] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [dailySalesSubmitted, setDailySalesSubmitted] = useState(false);
@@ -330,15 +329,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
       return product;
     }));
 
-    // Add to daily sales
-    const newSale: Sale = {
-      id: Date.now(),
-      items: [...cart],
-      total,
-      paymentMethod,
-      timestamp: new Date()
-    };
-    setDailySales(prev => [...prev, newSale]);
+    // Note: Daily sales are now tracked via database through useSales hook
 
     // Clear cart and payment method
     setCart([]);
@@ -370,34 +361,9 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     });
   };
 
-  const getTodaysSales = () => {
-    const today = new Date().toDateString();
-    const todaysSales = sales.filter(sale => new Date(sale.created_at).toDateString() === today);
-    
-    console.log('Debug - Today\'s date:', today);
-    console.log('Debug - All sales:', sales.length, 'sales total');
-    console.log('Debug - Today\'s sales:', todaysSales.length, 'sales found');
-    if (sales.length > 0) {
-      console.log('Debug - All sales dates:', sales.map(sale => ({
-        id: sale.id,
-        date: new Date(sale.created_at).toDateString(),
-        total: sale.total
-      })));
-    }
-    
-    return todaysSales;
-  };
-
-  const getDailyTotal = () => {
-    const todaysSales = getTodaysSales();
-    const total = todaysSales.reduce((total, sale) => total + Number(sale.total), 0);
-    console.log('Debug - Daily total calculated:', total);
-    return total;
-  };
-
   const submitDailySales = () => {
-    const todaysSales = getTodaysSales();
-    if (todaysSales.length === 0) {
+    const dbSummary = getSalesSummary();
+    if (dbSummary.salesCount === 0) {
       toast({
         title: "No Sales",
         description: "No sales to submit today",
@@ -411,7 +377,7 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
     
     toast({
       title: "Daily Sales Submitted",
-      description: "Daily sales have been submitted to accountant for approval",
+      description: `${dbSummary.salesCount} sales totaling UGX ${dbSummary.totalSales.toLocaleString()} submitted to accountant for approval`,
     });
   };
 
@@ -426,7 +392,6 @@ export const SupermarketPOS: React.FC<SupermarketPOSProps> = ({ onSaleRecord }) 
   );
 
   const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
-  const dailyTotal = dailySales.reduce((sum, sale) => sum + sale.total, 0);
 
   // Get database sales summary
   const dbSalesSummary = getSalesSummary();
