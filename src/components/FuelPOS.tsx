@@ -44,6 +44,8 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const [pumpNumber, setPumpNumber] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastReceiptData, setLastReceiptData] = useState<any>(null);
+  const [dailySalesSubmitted, setDailySalesSubmitted] = useState(false);
+  const [submissionDate, setSubmissionDate] = useState<Date | null>(null);
 
   const { createSale, isCreatingSale, sales, getSalesSummary } = useSales();
 
@@ -167,6 +169,43 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const handleReceiptClose = () => {
     setShowReceipt(false);
     setLastReceiptData(null);
+  };
+
+  const getTodaysSales = () => {
+    const today = new Date().toDateString();
+    return sales.filter(sale => 
+      sale.department === 'fuel' && 
+      new Date(sale.created_at).toDateString() === today
+    );
+  };
+
+  const getDailyTotal = () => {
+    return getTodaysSales().reduce((total, sale) => total + Number(sale.total), 0);
+  };
+
+  const submitDailySales = () => {
+    const todaysSales = getTodaysSales();
+    if (todaysSales.length === 0) {
+      toast({
+        title: "No Sales",
+        description: "No sales to submit today",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDailySalesSubmitted(true);
+    setSubmissionDate(new Date());
+    
+    toast({
+      title: "Daily Sales Submitted",
+      description: `${todaysSales.length} sales totaling UGX ${getDailyTotal().toLocaleString()} submitted to accountant for approval`,
+    });
+  };
+
+  const resetDailySubmission = () => {
+    setDailySalesSubmitted(false);
+    setSubmissionDate(null);
   };
 
   if (showReceipt && lastReceiptData) {
@@ -379,6 +418,76 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Daily Sales Summary & Submission */}
+      {sales.filter(sale => sale.department === 'fuel').length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Daily Sales Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-orange-50 p-4 rounded-lg mb-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex justify-between">
+                  <span>Today's Sales:</span>
+                  <span className="text-orange-600 font-semibold">UGX {getDailyTotal().toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Transactions:</span>
+                  <span className="font-semibold">{getTodaysSales().length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <Badge variant={dailySalesSubmitted ? "default" : "secondary"}>
+                    {dailySalesSubmitted ? "Submitted" : "Pending"}
+                  </Badge>
+                </div>
+                {submissionDate && (
+                  <div className="flex justify-between">
+                    <span>Submitted:</span>
+                    <span className="text-sm">{submissionDate.toLocaleTimeString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {getTodaysSales().length > 0 ? (
+              <>
+                {!dailySalesSubmitted ? (
+                  <Button 
+                    onClick={submitDailySales}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    Submit Daily Sales to Accountant
+                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-green-800 text-sm">
+                        ✅ Daily sales submitted successfully on {submissionDate?.toLocaleDateString()} at {submissionDate?.toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={resetDailySubmission}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Reset Submission Status
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                📊 No sales completed today yet. Complete some sales to see them appear here.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Current Fuel Inventory */}
       <Card>
