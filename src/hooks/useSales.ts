@@ -178,12 +178,13 @@ export const useSales = () => {
         .single();
 
       if (error) {
-        console.error('Supabase error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
+        console.error('=== SUPABASE ERROR DETAILS ===');
+        console.error('Error message:', error.message);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
+        console.error('Error code:', error.code);
+        console.error('Full error object:', error);
+        console.error('=== END ERROR DETAILS ===');
         throw error;
       }
 
