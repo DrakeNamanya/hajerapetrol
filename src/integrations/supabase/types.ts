@@ -134,6 +134,108 @@ export type Database = {
         }
         Relationships: []
       }
+      fuel_entries: {
+        Row: {
+          accountant_approved_at: string | null
+          approved_by_accountant: string | null
+          approved_by_manager: string | null
+          attendant_id: string
+          closing_stock: number
+          created_at: string
+          date: string
+          fuel_sold: number | null
+          fuel_type: string
+          id: string
+          manager_approved_at: string | null
+          notes: string | null
+          opening_stock: number
+          revenue_received: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accountant_approved_at?: string | null
+          approved_by_accountant?: string | null
+          approved_by_manager?: string | null
+          attendant_id: string
+          closing_stock: number
+          created_at?: string
+          date?: string
+          fuel_sold?: number | null
+          fuel_type?: string
+          id?: string
+          manager_approved_at?: string | null
+          notes?: string | null
+          opening_stock: number
+          revenue_received: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accountant_approved_at?: string | null
+          approved_by_accountant?: string | null
+          approved_by_manager?: string | null
+          attendant_id?: string
+          closing_stock?: number
+          created_at?: string
+          date?: string
+          fuel_sold?: number | null
+          fuel_type?: string
+          id?: string
+          manager_approved_at?: string | null
+          notes?: string | null
+          opening_stock?: number
+          revenue_received?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fuel_invoices: {
+        Row: {
+          client_name: string
+          created_at: string
+          created_by: string
+          due_date: string | null
+          fuel_quantity: number
+          fuel_type: string
+          id: string
+          notes: string | null
+          price_per_liter: number
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          client_name: string
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          fuel_quantity: number
+          fuel_type?: string
+          id?: string
+          notes?: string | null
+          price_per_liter: number
+          status?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          fuel_quantity?: number
+          fuel_type?: string
+          id?: string
+          notes?: string | null
+          price_per_liter?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_items: {
         Row: {
           barcode: string | null
@@ -246,6 +348,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lubricant_sales: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          product_name: string
+          quantity: number
+          total_amount: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          product_name: string
+          quantity: number
+          total_amount: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          product_name?: string
+          quantity?: number
+          total_amount?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
