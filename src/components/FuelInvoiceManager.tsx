@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileText, Plus, DollarSign } from "lucide-react";
+import { FileText, Plus, DollarSign, Printer } from "lucide-react";
 import { useFuelInvoices } from '@/hooks/useFuelInvoices';
+import { PrintableInvoice } from '@/components/PrintableInvoice';
 
 export const FuelInvoiceManager: React.FC = () => {
   const [clientName, setClientName] = useState('');
@@ -17,6 +18,7 @@ export const FuelInvoiceManager: React.FC = () => {
   const [pricePerLiter, setPricePerLiter] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [printingInvoice, setPrintingInvoice] = useState<any>(null);
 
   const { 
     invoices, 
@@ -240,26 +242,37 @@ export const FuelInvoiceManager: React.FC = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {invoice.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusUpdate(invoice.id, 'paid')}
-                          disabled={isUpdating}
-                        >
-                          Mark Paid
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleStatusUpdate(invoice.id, 'cancelled')}
-                          disabled={isUpdating}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPrintingInvoice(invoice)}
+                        className="flex items-center gap-1"
+                      >
+                        <Printer className="h-3 w-3" />
+                        Print
+                      </Button>
+                      {invoice.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStatusUpdate(invoice.id, 'paid')}
+                            disabled={isUpdating}
+                          >
+                            Mark Paid
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleStatusUpdate(invoice.id, 'cancelled')}
+                            disabled={isUpdating}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -267,6 +280,14 @@ export const FuelInvoiceManager: React.FC = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Print Modal */}
+      {printingInvoice && (
+        <PrintableInvoice
+          invoice={printingInvoice}
+          onClose={() => setPrintingInvoice(null)}
+        />
+      )}
     </div>
   );
 };
