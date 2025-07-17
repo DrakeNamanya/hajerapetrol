@@ -8,6 +8,7 @@ import { FuelPOS } from '@/components/FuelPOS';
 import { SupermarketPOS } from '@/components/SupermarketPOS';
 import { RestaurantPOS } from '@/components/RestaurantPOS';
 import { AccountantDashboard } from '@/components/AccountantDashboard';
+import { FuelAttendantDashboard } from '@/components/FuelAttendantDashboard';
 import { ManagerDashboard } from '@/components/ManagerDashboard';
 import { ManagerApprovalDashboard } from '@/components/ManagerApprovalDashboard';
 import { DirectorDashboard } from '@/components/DirectorDashboard';
@@ -211,7 +212,7 @@ const Index = () => {
     }
 
     if (profile.role === 'fuel_cashier') {
-      return <FuelPOS onSaleRecord={handleSaleRecord} />;
+      return <FuelAttendantDashboard />;
     }
 
     if (profile.role === 'supermarket_cashier') {
