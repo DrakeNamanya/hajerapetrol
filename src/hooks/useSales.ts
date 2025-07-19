@@ -227,7 +227,17 @@ export const useSales = () => {
         updateData.rejection_reason = rejectionReason;
       }
 
-      if (status !== 'rejected') {
+      if (status === 'rejected') {
+        // For rejected sales, track who rejected it
+        if (approvalType === 'accountant') {
+          updateData.approved_by_accountant = user.id;
+          updateData.accountant_approved_at = new Date().toISOString();
+        } else if (approvalType === 'manager') {
+          updateData.approved_by_manager = user.id;
+          updateData.manager_approved_at = new Date().toISOString();
+        }
+      } else {
+        // For approved sales
         if (approvalType === 'accountant') {
           updateData.approved_by_accountant = user.id;
           updateData.accountant_approved_at = new Date().toISOString();
