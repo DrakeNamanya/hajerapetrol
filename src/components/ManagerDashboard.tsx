@@ -210,9 +210,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="sales">Sales Approval</TabsTrigger>
           <TabsTrigger value="expenses">Expense Approval</TabsTrigger>
           <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="fuel">Fuel Verification</TabsTrigger>
@@ -280,92 +279,6 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
           </div>
         </TabsContent>
 
-        <TabsContent value="sales" className="space-y-6">
-          {pendingSales.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Sales Awaiting Final Approval</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {pendingSales.map(sale => (
-                    <div key={sale.id} className="border rounded-lg p-4 bg-gray-50">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge className={getDepartmentColor(sale.department)}>
-                              {sale.department.toUpperCase()}
-                            </Badge>
-                            <span className="text-sm text-gray-600">
-                              {sale.timestamp.toLocaleString()}
-                            </span>
-                          </div>
-                          <p className="font-medium">{sale.customer}</p>
-                          {sale.tableNumber && (
-                            <p className="text-sm text-gray-600">Table: {sale.tableNumber}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xl font-bold text-green-600">
-                            UGX {sale.total.toLocaleString()}
-                          </div>
-                          <p className="text-sm text-gray-600">{sale.paymentMethod}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="mb-3">
-                        <h4 className="font-medium mb-2">Items:</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {sale.items.map((item, index) => (
-                            <div key={index} className="text-sm bg-white p-2 rounded border">
-                              <span className="font-medium">{item.name}</span>
-                              <span className="text-gray-600 ml-2">
-                                {item.quantity} × UGX {item.price.toLocaleString()} = UGX {item.total.toLocaleString()}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <Button 
-                        onClick={() => handleApprove(sale.id)}
-                        className="w-full bg-green-600 hover:bg-green-700"
-                      >
-                        Approve Sale
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Approved Sales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {approvedSales.slice(-10).reverse().map(sale => (
-                  <div key={sale.id} className="flex justify-between items-center border-b pb-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className={getDepartmentColor(sale.department)}>
-                        {sale.department.toUpperCase()}
-                      </Badge>
-                      <span className="font-medium">{sale.customer}</span>
-                      <span className="text-sm text-gray-600">
-                        {sale.timestamp.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="font-semibold text-green-600">
-                      UGX {sale.total.toLocaleString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="expenses" className="space-y-6">
           <Card>
