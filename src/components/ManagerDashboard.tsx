@@ -210,10 +210,9 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
   return (
     <div className="space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="expenses">Expense Approval</TabsTrigger>
-          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="fuel">Fuel Verification</TabsTrigger>
         </TabsList>
 
@@ -364,9 +363,6 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
           )}
         </TabsContent>
 
-        <TabsContent value="purchase-orders" className="space-y-6">
-          <PurchaseOrderManager userRole="manager" />
-        </TabsContent>
 
         <TabsContent value="fuel" className="space-y-6">
           <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">

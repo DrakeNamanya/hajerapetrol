@@ -111,10 +111,9 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
   return (
     <div className="space-y-6">
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="sales">Sales Approval</TabsTrigger>
           <TabsTrigger value="expenses">Expense Records</TabsTrigger>
-          <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="reports">Sales Reports</TabsTrigger>
         </TabsList>
 
@@ -266,9 +265,6 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
           <ExpenseTracker userRole="accountant" />
         </TabsContent>
 
-        <TabsContent value="purchase-orders" className="space-y-6">
-          <PurchaseOrderManager userRole="accountant" />
-        </TabsContent>
 
         <TabsContent value="reports" className="space-y-6">
           <Card>

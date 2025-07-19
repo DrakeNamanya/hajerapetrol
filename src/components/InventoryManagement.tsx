@@ -80,10 +80,9 @@ export const InventoryManagement: React.FC = () => {
 
       {/* Main Inventory Tabs */}
       <Tabs defaultValue="items" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="items">Inventory Items</TabsTrigger>
           <TabsTrigger value="movements">Stock Movements</TabsTrigger>
-          <TabsTrigger value="orders">Purchase Orders</TabsTrigger>
           <TabsTrigger value="alerts" className="relative">
             Low Stock Alerts
             {stats?.criticalAlerts > 0 && (
@@ -102,9 +101,6 @@ export const InventoryManagement: React.FC = () => {
           <StockMovements />
         </TabsContent>
 
-        <TabsContent value="orders" className="space-y-4">
-          <PurchaseOrders />
-        </TabsContent>
 
         <TabsContent value="alerts" className="space-y-4">
           <LowStockAlerts />
