@@ -18,6 +18,7 @@ export interface FuelEntry {
   created_at: string;
   updated_at: string;
   fuel_type: string;
+  pump_fuel_sold?: number;
   notes?: string;
 }
 
@@ -26,6 +27,7 @@ export interface CreateFuelEntryData {
   closing_stock: number;
   revenue_received: number;
   fuel_type: string;
+  pump_fuel_sold?: number;
   notes?: string;
 }
 

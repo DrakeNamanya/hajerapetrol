@@ -16,6 +16,8 @@ import {
 import { useFuelEntries } from '@/hooks/useFuelEntries';
 import { useFuelInvoices } from '@/hooks/useFuelInvoices';
 import { useLubricantSales } from '@/hooks/useLubricantSales';
+import { FuelTankManager } from '@/components/FuelTankManager';
+import { FuelTankDisplay } from '@/components/FuelTankDisplay';
 
 export const FuelManagerDashboard: React.FC = () => {
   const { entries, updateEntryStatus, getEntriesByStatus, isUpdating } = useFuelEntries();
@@ -86,6 +88,19 @@ export const FuelManagerDashboard: React.FC = () => {
           <span className="font-medium">{new Date().toLocaleDateString()}</span>
         </div>
       </div>
+
+      {/* Tank Levels Overview */}
+      <FuelTankDisplay />
+
+      {/* Tank Manager Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tank Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FuelTankManager />
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

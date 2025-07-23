@@ -19,6 +19,7 @@ import { LubricantSalesManager } from './LubricantSalesManager';
 import { useFuelEntries } from '@/hooks/useFuelEntries';
 import { useFuelInvoices } from '@/hooks/useFuelInvoices';
 import { useLubricantSales } from '@/hooks/useLubricantSales';
+import { FuelTankDisplay } from '@/components/FuelTankDisplay';
 
 export const FuelAttendantDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("entries");
@@ -53,16 +54,26 @@ export const FuelAttendantDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Dashboard Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">Fuel Attendant Dashboard</h1>
-          <p className="text-muted-foreground">Manage daily fuel operations and track performance</p>
+          <p className="text-muted-foreground">Manage daily fuel operations</p>
         </div>
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
           <span className="font-medium">{new Date().toLocaleDateString()}</span>
         </div>
       </div>
+
+      {/* Tank Levels (Compact View) */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Current Tank Levels</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <FuelTankDisplay compact />
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

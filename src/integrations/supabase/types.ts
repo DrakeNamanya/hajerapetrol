@@ -149,6 +149,7 @@ export type Database = {
           manager_approved_at: string | null
           notes: string | null
           opening_stock: number
+          pump_fuel_sold: number | null
           revenue_received: number
           status: string
           updated_at: string
@@ -167,6 +168,7 @@ export type Database = {
           manager_approved_at?: string | null
           notes?: string | null
           opening_stock: number
+          pump_fuel_sold?: number | null
           revenue_received: number
           status?: string
           updated_at?: string
@@ -185,6 +187,7 @@ export type Database = {
           manager_approved_at?: string | null
           notes?: string | null
           opening_stock?: number
+          pump_fuel_sold?: number | null
           revenue_received?: number
           status?: string
           updated_at?: string
@@ -233,6 +236,45 @@ export type Database = {
           status?: string
           total_amount?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      fuel_tank_inventory: {
+        Row: {
+          created_at: string
+          current_level: number
+          fuel_type: string
+          id: string
+          last_refill_amount: number | null
+          last_refill_date: string | null
+          notes: string | null
+          tank_capacity: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          current_level?: number
+          fuel_type: string
+          id?: string
+          last_refill_amount?: number | null
+          last_refill_date?: string | null
+          notes?: string | null
+          tank_capacity?: number
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          current_level?: number
+          fuel_type?: string
+          id?: string
+          last_refill_amount?: number | null
+          last_refill_date?: string | null
+          notes?: string | null
+          tank_capacity?: number
+          updated_at?: string
+          updated_by?: string
         }
         Relationships: []
       }
