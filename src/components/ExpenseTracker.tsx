@@ -300,6 +300,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ userRole, depart
                     <SelectItem value="utilities">Utilities</SelectItem>
                     <SelectItem value="inventory">Inventory Purchase</SelectItem>
                     <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="petty_cash">Petty Cash</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
