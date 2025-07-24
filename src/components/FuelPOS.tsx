@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useSales, type SaleItem } from '@/hooks/useSales';
+import { useFuelTankInventory } from '@/hooks/useFuelTankInventory';
 import { ReceiptGenerator } from './ReceiptGenerator';
 
 interface FuelPOSProps {
@@ -48,6 +49,7 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
   const [submissionDate, setSubmissionDate] = useState<Date | null>(null);
 
   const { createSale, isCreatingSale, sales, getSalesSummary } = useSales();
+  const { deductFuelFromTank } = useFuelTankInventory();
 
   const selectedFuelData = fuelTypes.find(f => f.id === selectedFuel);
   const totalAmount = selectedFuelData ? parseFloat(quantity || '0') * selectedFuelData.price : 0;
@@ -75,12 +77,32 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
       return;
     }
 
-    // Update fuel inventory
+    // Update fuel inventory in local state and database
     setFuelTypes(prev => prev.map(fuel => 
       fuel.id === selectedFuel 
         ? { ...fuel, available: fuel.available - quantityNum }
         : fuel
     ));
+
+    // Deduct fuel from tank inventory in database
+    const fuelTypeMapping = {
+      'petrol_regular': 'petrol',
+      'petrol_premium': 'premium',
+      'diesel': 'diesel',
+      'kerosene': 'kerosene'
+    };
+    
+    const tankFuelType = fuelTypeMapping[selectedFuel as keyof typeof fuelTypeMapping] || selectedFuel;
+    
+    try {
+      deductFuelFromTank.mutate({
+        fuel_type: tankFuelType,
+        amount: quantityNum
+      });
+    } catch (error) {
+      console.error('Failed to deduct fuel from tank:', error);
+      // Don't block the sale if tank deduction fails, just log it
+    }
 
     const subtotal = totalAmount;
     const tax = subtotal * 0.18;
