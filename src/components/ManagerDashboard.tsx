@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { Fuel, AlertTriangle, CheckCircle, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { PurchaseOrderManager } from './PurchaseOrderManager';
+import { FuelTankManager } from './FuelTankManager';
 import type { User } from '@supabase/supabase-js';
 
 interface Sale {
@@ -213,7 +214,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="expenses">Expense Approval</TabsTrigger>
-          <TabsTrigger value="fuel">Fuel Verification</TabsTrigger>
+          <TabsTrigger value="tank">Tank Management</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -364,94 +365,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ sales, onApp
         </TabsContent>
 
 
-        <TabsContent value="fuel" className="space-y-6">
-          <Card className="bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+        <TabsContent value="tank" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-orange-800">
+              <CardTitle className="flex items-center gap-2">
                 <Fuel className="h-6 w-6" />
-                Daily Fuel Inventory Verification
+                Fuel Tank Management
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-700 mb-4">
-                Compare dipstick readings with calculated inventory to verify fuel levels.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {fuelInventory.map(fuel => {
-                  const dipstickReading = parseFloat(dipstickReadings[fuel.id as keyof typeof dipstickReadings] || '0');
-                  const calculatedInventory = fuel.totalInventory - fuel.sold;
-                  const difference = dipstickReading - calculatedInventory;
-                  const isMatch = Math.abs(difference) <= 50; // 50L tolerance
-
-                  return (
-                    <Card key={fuel.id} className="border-2">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{fuel.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <p className="text-gray-600">Total Inventory:</p>
-                            <p className="font-semibold">{fuel.totalInventory.toLocaleString()}L</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Fuel Sold:</p>
-                            <p className="font-semibold">{fuel.sold.toLocaleString()}L</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Calculated Available:</p>
-                            <p className="font-semibold">{calculatedInventory.toLocaleString()}L</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Dipstick Reading:</p>
-                            <Input
-                              type="number"
-                              value={dipstickReadings[fuel.id as keyof typeof dipstickReadings]}
-                              onChange={(e) => setDipstickReadings(prev => ({
-                                ...prev,
-                                [fuel.id]: e.target.value
-                              }))}
-                              placeholder="Enter reading"
-                              className="h-8"
-                            />
-                          </div>
-                        </div>
-
-                        {dipstickReading > 0 && (
-                          <div className={`p-3 rounded-lg ${isMatch ? 'bg-green-100' : 'bg-red-100'}`}>
-                            <div className="flex items-center gap-2 mb-1">
-                              {isMatch ? (
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <AlertTriangle className="h-4 w-4 text-red-600" />
-                              )}
-                              <span className={`font-semibold ${isMatch ? 'text-green-800' : 'text-red-800'}`}>
-                                {isMatch ? 'Match' : 'Discrepancy'}
-                              </span>
-                            </div>
-                            <p className="text-sm">
-                              Difference: {difference > 0 ? '+' : ''}{difference.toLocaleString()}L
-                            </p>
-                            {!isMatch && (
-                              <p className="text-xs text-red-600 mt-1">
-                                Please investigate the discrepancy
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              <Button 
-                onClick={handleDipstickVerification}
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
-              >
-                Verify and Record Readings
-              </Button>
+            <CardContent>
+              <FuelTankManager />
             </CardContent>
           </Card>
         </TabsContent>
