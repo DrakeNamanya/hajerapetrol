@@ -71,7 +71,7 @@ export const SalesAnalytics: React.FC = () => {
   const analytics = useMemo(() => {
     const totalRevenue = filteredSales.reduce((sum, sale) => sum + Number(sale.total), 0);
     const totalSales = filteredSales.length;
-    const approvedSales = filteredSales.filter(sale => sale.status === 'approved').length;
+    const approvedSales = filteredSales.filter(sale => sale.status === 'director_approved').length;
     const pendingSales = filteredSales.filter(sale => sale.status === 'pending').length;
     
     // Calculate approval rate

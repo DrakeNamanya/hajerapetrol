@@ -35,7 +35,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
   // Filter sales by status
   const pendingSales = sales.filter(sale => sale.status === 'pending');
   const accountantApprovedSales = sales.filter(sale => sale.status === 'accountant_approved');
-  const fullyApprovedSales = sales.filter(sale => sale.status === 'approved');
+  const fullyApprovedSales = sales.filter(sale => sale.status === 'director_approved');
   const pendingExpenses = expenses.filter(expense => expense.status === 'pending');
 
   const getDepartmentColor = (department: string) => {
@@ -76,7 +76,7 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
   const getDepartmentSalesData = (period: string) => {
     const now = new Date();
     let filteredSales = sales.filter(sale => 
-      sale.status === 'approved' || sale.status === 'accountant_approved'
+      sale.status === 'director_approved' || sale.status === 'accountant_approved'
     );
     
     if (period === 'day') {
@@ -246,8 +246,8 @@ export const AccountantDashboard: React.FC<AccountantDashboardProps> = ({
                         <span className="text-sm text-gray-600">
                           {new Date(sale.created_at).toLocaleString()}
                         </span>
-                        <Badge variant={sale.status === 'approved' ? 'default' : 'secondary'}>
-                          {sale.status === 'approved' ? 'Manager Approved' : 'Sent to Manager'}
+                  <Badge variant={sale.status === 'director_approved' ? 'default' : 'secondary'}>
+                    {sale.status === 'director_approved' ? 'Manager Approved' : 'Sent to Manager'}
                         </Badge>
                       </div>
                       <div className="font-semibold text-green-600">

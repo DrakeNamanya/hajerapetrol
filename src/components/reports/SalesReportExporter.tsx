@@ -25,7 +25,7 @@ export const SalesReportExporter: React.FC<SalesReportExporterProps> = ({ dateFr
   });
 
   const totalRevenue = filteredSales.reduce((sum, sale) => sum + Number(sale.total), 0);
-  const approvedSales = filteredSales.filter(sale => sale.status === 'approved');
+  const approvedSales = filteredSales.filter(sale => sale.status === 'director_approved');
   const approvedRevenue = approvedSales.reduce((sum, sale) => sum + Number(sale.total), 0);
 
   const departmentBreakdown = filteredSales.reduce((acc, sale) => {
@@ -35,7 +35,7 @@ export const SalesReportExporter: React.FC<SalesReportExporterProps> = ({ dateFr
     }
     acc[dept].count++;
     acc[dept].revenue += Number(sale.total);
-    if (sale.status === 'approved') {
+    if (sale.status === 'director_approved') {
       acc[dept].approved += Number(sale.total);
     }
     return acc;
@@ -193,8 +193,8 @@ export const SalesReportExporter: React.FC<SalesReportExporterProps> = ({ dateFr
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge 
-                    variant={sale.status === 'approved' ? 'default' : 'secondary'}
-                    className={sale.status === 'approved' ? 'bg-green-600' : ''}
+                    variant={sale.status === 'director_approved' ? 'default' : 'secondary'}
+                    className={sale.status === 'director_approved' ? 'bg-green-600' : ''}
                   >
                     {sale.status}
                   </Badge>

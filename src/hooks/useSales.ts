@@ -29,8 +29,8 @@ export interface CreateSaleData {
 
 interface UpdateSaleStatusParams {
   saleId: string;
-  status: string;
-  approvalType: 'accountant' | 'manager';
+  status: 'accountant_approved' | 'manager_approved' | 'director_approved' | 'rejected';
+  approvalType: 'accountant' | 'manager' | 'director';
   rejectionReason?: string;
 }
 
@@ -118,7 +118,12 @@ export const useSales = () => {
                 title: "Sale Approved by Accountant",
                 description: `Sale UGX ${Number(updatedSale.total).toLocaleString()} sent to manager`,
               });
-            } else if (updatedSale.status === 'approved') {
+            } else if (updatedSale.status === 'manager_approved') {
+              toast({
+                title: "Sale Approved by Manager", 
+                description: `Sale UGX ${Number(updatedSale.total).toLocaleString()} sent to director`,
+              });
+            } else if (updatedSale.status === 'director_approved') {
               toast({
                 title: "Sale Fully Approved",
                 description: `Sale UGX ${Number(updatedSale.total).toLocaleString()} completed`,
@@ -235,6 +240,9 @@ export const useSales = () => {
         } else if (approvalType === 'manager') {
           updateData.approved_by_manager = user.id;
           updateData.manager_approved_at = new Date().toISOString();
+        } else if (approvalType === 'director') {
+          updateData.approved_by_director = user.id;
+          updateData.director_approved_at = new Date().toISOString();
         }
       } else {
         // For approved sales
@@ -244,6 +252,9 @@ export const useSales = () => {
         } else if (approvalType === 'manager') {
           updateData.approved_by_manager = user.id;
           updateData.manager_approved_at = new Date().toISOString();
+        } else if (approvalType === 'director') {
+          updateData.approved_by_director = user.id;
+          updateData.director_approved_at = new Date().toISOString();
         }
       }
 
@@ -283,7 +294,7 @@ export const useSales = () => {
 
     const totalSales = todaySales.reduce((sum, sale) => sum + Number(sale.total), 0);
     const pendingSales = todaySales.filter(sale => sale.status === 'pending').length;
-    const approvedSales = todaySales.filter(sale => sale.status === 'approved').length;
+    const approvedSales = todaySales.filter(sale => sale.status === 'director_approved').length;
 
     return {
       totalSales,

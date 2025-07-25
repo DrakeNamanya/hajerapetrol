@@ -393,37 +393,58 @@ export type Database = {
       }
       lubricant_sales: {
         Row: {
+          accountant_approved_at: string | null
+          approved_by_accountant: string | null
+          approved_by_director: string | null
+          approved_by_manager: string | null
           category: string | null
           created_at: string
           created_by: string
+          director_approved_at: string | null
           id: string
+          manager_approved_at: string | null
           notes: string | null
           product_name: string
           quantity: number
+          status: Database["public"]["Enums"]["sales_status"] | null
           total_amount: number
           unit_price: number
           updated_at: string
         }
         Insert: {
+          accountant_approved_at?: string | null
+          approved_by_accountant?: string | null
+          approved_by_director?: string | null
+          approved_by_manager?: string | null
           category?: string | null
           created_at?: string
           created_by: string
+          director_approved_at?: string | null
           id?: string
+          manager_approved_at?: string | null
           notes?: string | null
           product_name: string
           quantity: number
+          status?: Database["public"]["Enums"]["sales_status"] | null
           total_amount: number
           unit_price: number
           updated_at?: string
         }
         Update: {
+          accountant_approved_at?: string | null
+          approved_by_accountant?: string | null
+          approved_by_director?: string | null
+          approved_by_manager?: string | null
           category?: string | null
           created_at?: string
           created_by?: string
+          director_approved_at?: string | null
           id?: string
+          manager_approved_at?: string | null
           notes?: string | null
           product_name?: string
           quantity?: number
+          status?: Database["public"]["Enums"]["sales_status"] | null
           total_amount?: number
           unit_price?: number
           updated_at?: string
@@ -675,19 +696,21 @@ export type Database = {
           accountant_approved_at: string | null
           amount_received: number | null
           approved_by_accountant: string | null
+          approved_by_director: string | null
           approved_by_manager: string | null
           change_amount: number | null
           created_at: string
           created_by: string
           customer_name: string | null
           department: string
+          director_approved_at: string | null
           id: string
           items: Json
           manager_approved_at: string | null
           payment_method: string
           pump_number: string | null
           sale_type: string
-          status: string
+          status: Database["public"]["Enums"]["sales_status"] | null
           subtotal: number
           table_number: string | null
           tax: number
@@ -698,19 +721,21 @@ export type Database = {
           accountant_approved_at?: string | null
           amount_received?: number | null
           approved_by_accountant?: string | null
+          approved_by_director?: string | null
           approved_by_manager?: string | null
           change_amount?: number | null
           created_at?: string
           created_by: string
           customer_name?: string | null
           department: string
+          director_approved_at?: string | null
           id?: string
           items: Json
           manager_approved_at?: string | null
           payment_method: string
           pump_number?: string | null
           sale_type: string
-          status?: string
+          status?: Database["public"]["Enums"]["sales_status"] | null
           subtotal?: number
           table_number?: string | null
           tax?: number
@@ -721,19 +746,21 @@ export type Database = {
           accountant_approved_at?: string | null
           amount_received?: number | null
           approved_by_accountant?: string | null
+          approved_by_director?: string | null
           approved_by_manager?: string | null
           change_amount?: number | null
           created_at?: string
           created_by?: string
           customer_name?: string | null
           department?: string
+          director_approved_at?: string | null
           id?: string
           items?: Json
           manager_approved_at?: string | null
           payment_method?: string
           pump_number?: string | null
           sale_type?: string
-          status?: string
+          status?: Database["public"]["Enums"]["sales_status"] | null
           subtotal?: number
           table_number?: string | null
           tax?: number
@@ -852,6 +879,12 @@ export type Database = {
         | "fuel"
         | "supermarket"
         | "restaurant"
+      sales_status:
+        | "pending"
+        | "accountant_approved"
+        | "manager_approved"
+        | "director_approved"
+        | "rejected"
       user_role:
         | "director"
         | "manager"
@@ -993,6 +1026,13 @@ export const Constants = {
         "fuel",
         "supermarket",
         "restaurant",
+      ],
+      sales_status: [
+        "pending",
+        "accountant_approved",
+        "manager_approved",
+        "director_approved",
+        "rejected",
       ],
       user_role: [
         "director",

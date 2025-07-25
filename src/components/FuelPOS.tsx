@@ -427,7 +427,7 @@ export const FuelPOS: React.FC<FuelPOSProps> = ({ onSaleRecord }) => {
                     <TableCell>{sale.payment_method}</TableCell>
                     <TableCell>
                       <Badge 
-                        variant={sale.status === 'approved' ? 'default' : 
+                        variant={sale.status === 'director_approved' ? 'default' : 
                                  sale.status === 'pending' ? 'secondary' : 'destructive'}
                       >
                         {sale.status}

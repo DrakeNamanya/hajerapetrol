@@ -1,20 +1,18 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSales } from '@/hooks/useSales';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 
-export const ManagerApprovalDashboard: React.FC = () => {
+export const DirectorApprovalDashboard: React.FC = () => {
   const { sales, updateSaleStatus, isUpdatingSale } = useSales();
 
-  // Filter sales by status - managers see accountant-approved sales
-  const pendingManagerApproval = sales.filter(sale => sale.status === 'accountant_approved');
-  const managerApprovedSales = sales.filter(sale => sale.status === 'director_approved');
-  const allPendingSales = sales.filter(sale => sale.status === 'pending');
+  // Filter sales by status - directors see manager-approved sales
+  const pendingDirectorApproval = sales.filter(sale => sale.status === 'manager_approved');
+  const directorApprovedSales = sales.filter(sale => sale.status === 'director_approved');
+  const allManagerApprovedSales = sales.filter(sale => sale.status === 'manager_approved');
 
   const getDepartmentColor = (department: string) => {
     switch (department) {
@@ -28,8 +26,8 @@ export const ManagerApprovalDashboard: React.FC = () => {
   const handleApproveSale = (saleId: string) => {
     updateSaleStatus({
       saleId,
-      status: 'manager_approved',
-      approvalType: 'manager'
+      status: 'director_approved',
+      approvalType: 'director'
     });
   };
 
@@ -39,7 +37,7 @@ export const ManagerApprovalDashboard: React.FC = () => {
       updateSaleStatus({
         saleId,
         status: 'rejected',
-        approvalType: 'manager',
+        approvalType: 'director',
         rejectionReason: reason
       });
     }
@@ -50,32 +48,21 @@ export const ManagerApprovalDashboard: React.FC = () => {
     return items;
   };
 
-  // Get today's approved sales total
+  // Calculate summary statistics
+  const totalPendingValue = pendingDirectorApproval.reduce((sum, sale) => sum + Number(sale.total), 0);
   const today = new Date().toDateString();
-  const todayApprovedSales = managerApprovedSales.filter(sale => 
+  const todayApprovedSales = directorApprovedSales.filter(sale => 
     new Date(sale.created_at).toDateString() === today
   );
   const todayTotal = todayApprovedSales.reduce((sum, sale) => sum + Number(sale.total), 0);
-
-  // Department breakdown for today
-  const departmentTotals = todayApprovedSales.reduce((acc, sale) => {
-    acc[sale.department] = (acc[sale.department] || 0) + Number(sale.total);
-    return acc;
-  }, {} as Record<string, number>);
-
-  const chartData = [
-    { department: 'Fuel', amount: departmentTotals.fuel || 0 },
-    { department: 'Supermarket', amount: departmentTotals.supermarket || 0 },
-    { department: 'Restaurant', amount: departmentTotals.restaurant || 0 },
-  ];
 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="pending">Pending Approval</TabsTrigger>
-          <TabsTrigger value="overview">Sales Overview</TabsTrigger>
-          <TabsTrigger value="reports">Department Reports</TabsTrigger>
+          <TabsTrigger value="pending">Pending Final Approval</TabsTrigger>
+          <TabsTrigger value="approved">Approved Sales</TabsTrigger>
+          <TabsTrigger value="overview">Executive Overview</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="space-y-6">
@@ -83,24 +70,26 @@ export const ManagerApprovalDashboard: React.FC = () => {
             <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {pendingManagerApproval.length}
-                  </div>
+                  <Clock className="h-8 w-8 text-yellow-600" />
                   <div>
-                    <p className="text-yellow-600 font-medium">Awaiting Approval</p>
+                    <div className="text-2xl font-bold text-yellow-600">
+                      {pendingDirectorApproval.length}
+                    </div>
+                    <p className="text-yellow-600 font-medium">Awaiting Final Approval</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl font-bold text-blue-600">
-                    UGX {pendingManagerApproval.reduce((sum, sale) => sum + Number(sale.total), 0).toLocaleString()}
-                  </div>
+                  <AlertTriangle className="h-8 w-8 text-purple-600" />
                   <div>
-                    <p className="text-blue-600 font-medium">Pending Value</p>
+                    <div className="text-2xl font-bold text-purple-600">
+                      UGX {totalPendingValue.toLocaleString()}
+                    </div>
+                    <p className="text-purple-600 font-medium">Value Pending</p>
                   </div>
                 </div>
               </CardContent>
@@ -109,10 +98,11 @@ export const ManagerApprovalDashboard: React.FC = () => {
             <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
               <CardContent className="p-6">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl font-bold text-green-600">
-                    UGX {todayTotal.toLocaleString()}
-                  </div>
+                  <CheckCircle className="h-8 w-8 text-green-600" />
                   <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      UGX {todayTotal.toLocaleString()}
+                    </div>
                     <p className="text-green-600 font-medium">Today's Approved</p>
                   </div>
                 </div>
@@ -122,11 +112,14 @@ export const ManagerApprovalDashboard: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Sales Requiring Manager Approval</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Sales Requiring Final Approval
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pendingManagerApproval.map(sale => {
+                {pendingDirectorApproval.map(sale => {
                   const items = formatSaleItems(sale.items);
                   return (
                     <div key={sale.id} className="border rounded-lg p-4 bg-gradient-to-r from-yellow-50 to-orange-50">
@@ -136,8 +129,8 @@ export const ManagerApprovalDashboard: React.FC = () => {
                             <Badge className={getDepartmentColor(sale.department)}>
                               {sale.department.toUpperCase()}
                             </Badge>
-                            <Badge variant="outline" className="bg-green-50 text-green-700">
-                              Accountant Approved
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              Manager Approved
                             </Badge>
                             <span className="text-sm text-gray-600">
                               {new Date(sale.created_at).toLocaleString()}
@@ -173,9 +166,9 @@ export const ManagerApprovalDashboard: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="bg-green-50 p-3 rounded mb-3">
-                        <p className="text-sm text-green-800">
-                          <strong>Status:</strong> Approved by Accountant → Awaiting Manager Approval
+                      <div className="bg-blue-50 p-3 rounded mb-3">
+                        <p className="text-sm text-blue-800">
+                          <strong>Approval History:</strong> Approved by Accountant → Approved by Manager → Awaiting Director
                         </p>
                       </div>
 
@@ -185,7 +178,8 @@ export const ManagerApprovalDashboard: React.FC = () => {
                           className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                           disabled={isUpdatingSale}
                         >
-                          {isUpdatingSale ? 'Processing...' : 'Approve & Send to Director'}
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          {isUpdatingSale ? 'Processing...' : 'Final Approval'}
                         </Button>
                         <Button 
                           onClick={() => handleRejectSale(sale.id)}
@@ -193,6 +187,7 @@ export const ManagerApprovalDashboard: React.FC = () => {
                           className="flex-1"
                           disabled={isUpdatingSale}
                         >
+                          <XCircle className="h-4 w-4 mr-2" />
                           Reject
                         </Button>
                       </div>
@@ -200,10 +195,11 @@ export const ManagerApprovalDashboard: React.FC = () => {
                   );
                 })}
                 
-                {pendingManagerApproval.length === 0 && (
+                {pendingDirectorApproval.length === 0 && (
                   <div className="text-center py-12 text-gray-500">
-                    <p className="text-lg font-medium">No sales awaiting your approval</p>
-                    <p className="text-sm">All accountant-approved sales have been processed</p>
+                    <CheckCircle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-lg font-medium">All sales are up to date</p>
+                    <p className="text-sm">No sales require your approval at this time</p>
                   </div>
                 )}
               </div>
@@ -211,15 +207,17 @@ export const ManagerApprovalDashboard: React.FC = () => {
           </Card>
         </TabsContent>
 
-
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="approved" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Recently Approved Sales</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                Recently Approved Sales
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {managerApprovedSales
+                {directorApprovedSales
                   .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                   .slice(0, 20)
                   .map(sale => (
@@ -233,7 +231,7 @@ export const ManagerApprovalDashboard: React.FC = () => {
                           {new Date(sale.created_at).toLocaleString()}
                         </span>
                         <Badge variant="default" className="bg-green-600">
-                          Approved
+                          Fully Approved
                         </Badge>
                       </div>
                       <div className="font-semibold text-green-600">
@@ -246,47 +244,69 @@ export const ManagerApprovalDashboard: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="reports" className="space-y-6">
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-blue-600">
+                  {sales.filter(sale => sale.status === 'pending').length}
+                </div>
+                <p className="text-sm text-gray-600">Pending Sales</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {sales.filter(sale => sale.status === 'accountant_approved').length}
+                </div>
+                <p className="text-sm text-gray-600">With Accountant</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-orange-600">
+                  {sales.filter(sale => sale.status === 'manager_approved').length}
+                </div>
+                <p className="text-sm text-gray-600">With Manager</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-green-600">
+                  {directorApprovedSales.length}
+                </div>
+                <p className="text-sm text-gray-600">Fully Approved</p>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Today's Sales by Department</CardTitle>
+              <CardTitle>Approval Workflow Status</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  amount: {
-                    label: "Sales Amount",
-                    color: "#10b981",
-                  },
-                }}
-                className="h-[400px]"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="department" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="amount" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-blue-800 mb-2">Current Workflow</h3>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="bg-blue-100 px-2 py-1 rounded">Fuel Cashier</span>
+                    <span>→</span>
+                    <span className="bg-yellow-100 px-2 py-1 rounded">Accountant</span>
+                    <span>→</span>
+                    <span className="bg-orange-100 px-2 py-1 rounded">Manager</span>
+                    <span>→</span>
+                    <span className="bg-green-100 px-2 py-1 rounded">Director</span>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-gray-600">
+                  <p>• Fuel sales automatically deduct from tank inventory</p>
+                  <p>• All sales require full approval chain completion</p>
+                  <p>• Director approval completes the workflow</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {chartData.map(dept => (
-              <Card key={dept.department}>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-lg">{dept.department}</h3>
-                  <p className="text-2xl font-bold text-green-600">
-                    UGX {dept.amount.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-600">Today's Total</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         </TabsContent>
       </Tabs>
     </div>
