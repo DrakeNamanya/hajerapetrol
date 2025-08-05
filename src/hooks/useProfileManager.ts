@@ -6,7 +6,7 @@ import { UserProfile } from '@/types/auth';
 export const useProfileManager = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const fetchUserProfile = async (userId: string, retryCount = 0): Promise<boolean> => {
     try {
