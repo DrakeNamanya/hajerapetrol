@@ -4,25 +4,25 @@ import { Plus, Eye, Calculator, DollarSign, AlertTriangle, Save, Send, Droplets,
 export const FuelAttendantDashboard: React.FC = () => {
   // Initial Stock - This represents the fuel brought by trucks and poured into tanks
   const [initialStock, setInitialStock] = useState({
-    petrol: { liters: 50000, date: new Date().toISOString().split('T')[0] },
-    diesel: { liters: 40000, date: new Date().toISOString().split('T')[0] },
-    kerosene: { liters: 30000, date: new Date().toISOString().split('T')[0] }
+    petrol: { liters: 0, date: new Date().toISOString().split('T')[0] },
+    diesel: { liters: 0, date: new Date().toISOString().split('T')[0] },
+    kerosene: { liters: 0, date: new Date().toISOString().split('T')[0] }
   });
 
   // State for fuel data
   const [openingStock, setOpeningStock] = useState<any[]>([]);
   const [closingStock, setClosingStock] = useState<any[]>([]);
   const [fuelPrices, setFuelPrices] = useState({
-    petrol: 6500,
-    diesel: 6200,
-    kerosene: 5800
+    petrol: 0,
+    diesel: 0,
+    kerosene: 0
   });
 
   // Alerts and thresholds
   const [lowStockAlert, setLowStockAlert] = useState({
-    petrol: 5000,
-    diesel: 4000,
-    kerosene: 3000
+    petrol: 0,
+    diesel: 0,
+    kerosene: 0
   });
 
   // Form states
