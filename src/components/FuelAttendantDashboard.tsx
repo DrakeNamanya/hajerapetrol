@@ -106,13 +106,21 @@ export const FuelAttendantDashboard: React.FC = () => {
   };
 
   // Calculate weight loss reconciliation
-  const calculateWeightLoss = () => {
+  const calculateWeightLoss = (): Record<string, {
+    initialStock: number;
+    totalSales: number;
+    expectedEvaporation: number;
+    actualRemaining: number;
+    expectedRemaining: number;
+    variance: number;
+    daysSinceDelivery: number;
+  }> => {
     const currentDate = new Date();
-    const weightLoss = {};
+    const weightLoss: Record<string, any> = {};
     
     fuelTypes.forEach(fuel => {
       const startDate = new Date(initialStock[fuel].date);
-      const daysDiff = Math.ceil((currentDate - startDate) / (1000 * 60 * 60 * 24));
+      const daysDiff = Math.ceil((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       
       // Estimated evaporation rate: 0.1% per day (can be adjusted)
       const evaporationRate = 0.001;
@@ -926,7 +934,7 @@ export const FuelAttendantDashboard: React.FC = () => {
                       <strong>Expected Revenue:</strong> UGX {totalRevenue.toLocaleString()}
                     </p>
                     <p className="text-sm text-primary">
-                      <strong>Difference:</strong> UGX {(parseFloat(submissionData.totalCashCollected || 0) - totalRevenue).toLocaleString()}
+                      <strong>Difference:</strong> UGX {(parseFloat(submissionData.totalCashCollected || '0') - totalRevenue).toLocaleString()}
                     </p>
                   </div>
                 </div>
