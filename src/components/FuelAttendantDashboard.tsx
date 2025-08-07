@@ -83,7 +83,7 @@ export const FuelAttendantDashboard: React.FC = () => {
       );
       
       if (matchingOpening) {
-        const litersSold = closing.meterReading - matchingOpening.meterReading;
+        const litersSold = matchingOpening.meterReading - closing.meterReading;
         if (litersSold > 0) {
           totalSales[closing.fuelType] += litersSold;
         }
@@ -174,7 +174,7 @@ export const FuelAttendantDashboard: React.FC = () => {
       );
       
       if (matchingOpening) {
-        const litersSold = closing.meterReading - matchingOpening.meterReading;
+        const litersSold = matchingOpening.meterReading - closing.meterReading;
         const revenue = litersSold * fuelPrices[closing.fuelType];
         
         salesData.push({
