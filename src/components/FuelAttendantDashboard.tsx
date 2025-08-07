@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Eye, Calculator, DollarSign, AlertTriangle, Save, Send, Droplets, TrendingDown } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const FuelAttendantDashboard: React.FC = () => {
   // Initial Stock - This represents the fuel brought by trucks and poured into tanks
@@ -292,15 +294,59 @@ export const FuelAttendantDashboard: React.FC = () => {
     setValidationError('');
   };
 
-  const handleCashSubmission = () => {
-    alert(`Cash submission of UGX ${parseFloat(submissionData.totalCashCollected).toLocaleString()} from ${submissionData.attendantAccount} has been submitted for approval.`);
-    setSubmissionData({
-      attendantAccount: '',
-      totalCashCollected: '',
-      date: new Date().toISOString().split('T')[0],
-      shift: '3pm'
-    });
-    setShowSubmissionForm(false);
+  const handleCashSubmission = async () => {
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Please log in to submit fuel entries');
+        return;
+      }
+
+      // Calculate total sales for fuel sold
+      const totalSales = calculateTotalSales();
+      const fuelSold = Object.values(totalSales).reduce((sum, liters) => sum + liters, 0);
+
+      // Calculate opening and closing stock from first and last records
+      const openingStockReading = openingStock.length > 0 ? openingStock[0].dipstickReading : 0;
+      const closingStockReading = closingStock.length > 0 ? closingStock[closingStock.length - 1].dipstickReading : 0;
+
+      // Submit fuel entry to database
+      const { error } = await supabase
+        .from('fuel_entries')
+        .insert({
+          attendant_id: user.id,
+          opening_stock: openingStockReading,
+          closing_stock: closingStockReading,
+          fuel_sold: fuelSold,
+          pump_fuel_sold: fuelSold, // Same as fuel_sold for now
+          revenue_received: parseFloat(submissionData.totalCashCollected),
+          fuel_type: 'petrol', // Default to petrol, can be enhanced later
+          notes: `Shift: ${submissionData.shift}. Expected Revenue: UGX ${totalRevenue.toLocaleString()}`,
+          status: 'submitted'
+        });
+
+      if (error) {
+        console.error('Error submitting fuel entry:', error);
+        toast.error('Failed to submit fuel entry');
+        return;
+      }
+
+      toast.success('Fuel entry submitted successfully and sent to accountant for approval');
+      
+      // Reset form
+      setSubmissionData({
+        attendantAccount: '',
+        totalCashCollected: '',
+        date: new Date().toISOString().split('T')[0],
+        shift: '3pm'
+      });
+      setShowSubmissionForm(false);
+      
+    } catch (error) {
+      console.error('Error submitting fuel entry:', error);
+      toast.error('Failed to submit fuel entry');
+    }
   };
 
   const salesData = calculateSales();
