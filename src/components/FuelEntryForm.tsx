@@ -62,16 +62,16 @@ export const FuelEntryForm: React.FC = () => {
         if (pumpSold > 0 && fuelType) {
           deductFuelFromTank.mutate({ fuel_type: fuelType, amount: pumpSold });
         }
+        
+        // Reset form only on success
+        setOpeningStock('');
+        setClosingStock('');
+        setRevenueReceived('');
+        setFuelType('');
+        setPumpFuelSold('');
+        setNotes('');
       }
     });
-
-    // Reset form
-    setOpeningStock('');
-    setClosingStock('');
-    setRevenueReceived('');
-    setFuelType('');
-    setPumpFuelSold('');
-    setNotes('');
   };
 
   return (
