@@ -49,19 +49,35 @@ export function useFuelEntries() {
 
   const createEntry = useMutation({
     mutationFn: async (entryData: CreateFuelEntryData) => {
+      console.log('Starting fuel entry creation...', entryData);
+      
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      if (!user) {
+        console.error('User not authenticated');
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('User authenticated:', user.id);
+
+      const insertData = {
+        ...entryData,
+        attendant_id: user.id,
+      };
+      
+      console.log('Insert data:', insertData);
 
       const { data, error } = await supabase
         .from('fuel_entries')
-        .insert({
-          ...entryData,
-          attendant_id: user.id,
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('Insert response:', { data, error });
+
+      if (error) {
+        console.error('Insert error:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
