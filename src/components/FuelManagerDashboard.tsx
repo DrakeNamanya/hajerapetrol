@@ -29,12 +29,24 @@ export const FuelManagerDashboard: React.FC = () => {
   const pendingInvoices = getInvoicesByStatus('pending');
   const paidInvoices = getInvoicesByStatus('paid');
 
-  const handleFinalize = (entryId: string) => {
+  const handleApprove = (entryId: string) => {
     updateEntryStatus.mutate({ 
       entryId, 
       status: 'approved_by_manager',
       approvalType: 'manager'
     });
+  };
+
+  const handleReject = (entryId: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (reason) {
+      updateEntryStatus.mutate({
+        entryId,
+        status: 'rejected',
+        approvalType: 'manager',
+        rejectionReason: reason
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -245,7 +257,7 @@ export const FuelManagerDashboard: React.FC = () => {
                     <TableCell>
                       <Button
                         size="sm"
-                        onClick={() => handleFinalize(entry.id)}
+                        onClick={() => handleApprove(entry.id)}
                         disabled={isUpdating}
                         className="bg-blue-600 hover:bg-blue-700"
                       >

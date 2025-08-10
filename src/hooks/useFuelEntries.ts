@@ -101,24 +101,52 @@ export function useFuelEntries() {
     mutationFn: async ({ 
       entryId, 
       status, 
-      approvalType 
+      approvalType,
+      rejectionReason
     }: { 
       entryId: string; 
-      status: 'approved_by_accountant' | 'approved_by_manager';
+      status: 'approved_by_accountant' | 'approved_by_manager' | 'rejected';
       approvalType: 'accountant' | 'manager';
+      rejectionReason?: string;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const updateData: any = { status };
+      console.log('Updating fuel entry status:', { entryId, status, approvalType, rejectionReason });
       
-      if (approvalType === 'accountant') {
-        updateData.approved_by_accountant = user.id;
-        updateData.accountant_approved_at = new Date().toISOString();
-      } else if (approvalType === 'manager') {
-        updateData.approved_by_manager = user.id;
-        updateData.manager_approved_at = new Date().toISOString();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        throw new Error('User not authenticated');
       }
+
+      const updateData: any = {
+        status,
+        updated_at: new Date().toISOString()
+      };
+
+      if (rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+      }
+
+      if (status === 'rejected') {
+        // For rejected entries, track who rejected it
+        if (approvalType === 'accountant') {
+          updateData.approved_by_accountant = user.id;
+          updateData.accountant_approved_at = new Date().toISOString();
+        } else if (approvalType === 'manager') {
+          updateData.approved_by_manager = user.id;
+          updateData.manager_approved_at = new Date().toISOString();
+        }
+      } else {
+        // For approved entries
+        if (approvalType === 'accountant') {
+          updateData.approved_by_accountant = user.id;
+          updateData.accountant_approved_at = new Date().toISOString();
+        } else if (approvalType === 'manager') {
+          updateData.approved_by_manager = user.id;
+          updateData.manager_approved_at = new Date().toISOString();
+        }
+      }
+
+      console.log('Update data being sent:', updateData);
 
       const { data, error } = await supabase
         .from('fuel_entries')
@@ -127,7 +155,12 @@ export function useFuelEntries() {
         .select()
         .single();
 
-      if (error) throw error;
+      console.log('Update response:', { data, error });
+
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
