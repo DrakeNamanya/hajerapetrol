@@ -8,7 +8,7 @@ export interface FuelEntry {
   attendant_id: string;
   opening_stock: number;
   closing_stock: number;
-  fuel_sold: number; // Generated column - calculated automatically (opening_stock - closing_stock)
+  fuel_sold: number;
   revenue_received: number;
   status: 'submitted' | 'approved_by_accountant' | 'approved_by_manager';
   approved_by_accountant?: string;
@@ -49,35 +49,19 @@ export function useFuelEntries() {
 
   const createEntry = useMutation({
     mutationFn: async (entryData: CreateFuelEntryData) => {
-      console.log('Starting fuel entry creation...', entryData);
-      
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        throw new Error('User not authenticated');
-      }
-      
-      console.log('User authenticated:', user.id);
-
-      const insertData = {
-        ...entryData,
-        attendant_id: user.id,
-      };
-      
-      console.log('Insert data:', insertData);
+      if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
         .from('fuel_entries')
-        .insert(insertData)
+        .insert({
+          ...entryData,
+          attendant_id: user.id,
+        })
         .select()
         .single();
 
-      console.log('Insert response:', { data, error });
-
-      if (error) {
-        console.error('Insert error:', error);
-        throw error;
-      }
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
@@ -101,52 +85,24 @@ export function useFuelEntries() {
     mutationFn: async ({ 
       entryId, 
       status, 
-      approvalType,
-      rejectionReason
+      approvalType 
     }: { 
       entryId: string; 
-      status: 'approved_by_accountant' | 'approved_by_manager' | 'rejected';
+      status: 'approved_by_accountant' | 'approved_by_manager';
       approvalType: 'accountant' | 'manager';
-      rejectionReason?: string;
     }) => {
-      console.log('Updating fuel entry status:', { entryId, status, approvalType, rejectionReason });
-      
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('User not authenticated');
-        throw new Error('User not authenticated');
+      if (!user) throw new Error('User not authenticated');
+
+      const updateData: any = { status };
+      
+      if (approvalType === 'accountant') {
+        updateData.approved_by_accountant = user.id;
+        updateData.accountant_approved_at = new Date().toISOString();
+      } else if (approvalType === 'manager') {
+        updateData.approved_by_manager = user.id;
+        updateData.manager_approved_at = new Date().toISOString();
       }
-
-      const updateData: any = {
-        status,
-        updated_at: new Date().toISOString()
-      };
-
-      if (rejectionReason) {
-        updateData.rejection_reason = rejectionReason;
-      }
-
-      if (status === 'rejected') {
-        // For rejected entries, track who rejected it
-        if (approvalType === 'accountant') {
-          updateData.approved_by_accountant = user.id;
-          updateData.accountant_approved_at = new Date().toISOString();
-        } else if (approvalType === 'manager') {
-          updateData.approved_by_manager = user.id;
-          updateData.manager_approved_at = new Date().toISOString();
-        }
-      } else {
-        // For approved entries
-        if (approvalType === 'accountant') {
-          updateData.approved_by_accountant = user.id;
-          updateData.accountant_approved_at = new Date().toISOString();
-        } else if (approvalType === 'manager') {
-          updateData.approved_by_manager = user.id;
-          updateData.manager_approved_at = new Date().toISOString();
-        }
-      }
-
-      console.log('Update data being sent:', updateData);
 
       const { data, error } = await supabase
         .from('fuel_entries')
@@ -155,12 +111,7 @@ export function useFuelEntries() {
         .select()
         .single();
 
-      console.log('Update response:', { data, error });
-
-      if (error) {
-        console.error('Update error:', error);
-        throw error;
-      }
+      if (error) throw error;
       return data;
     },
     onSuccess: () => {
