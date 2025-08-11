@@ -292,14 +292,23 @@ export const FuelAttendantDashboard: React.FC = () => {
       return;
     }
 
+    // Calculate total opening stock (what we started with)
+    const totalOpeningStock = Object.values(openingStock).reduce((sum, stock) => sum + stock.liters, 0);
+    
+    // Calculate total closing stock (what remains)
+    const totalClosingStock = Object.values(closingStock).reduce((sum, stock) => sum + stock.liters, 0);
+    
+    // Fuel sold = Opening stock - Closing stock (to avoid negatives)
+    const fuelSold = totalOpeningStock - totalClosingStock;
+
     try {
       // Submit to fuel_entries table for accountant review
       await createEntry.mutateAsync({
-        opening_stock: totalLitersSold, // Use calculated total sold as opening
-        closing_stock: parseFloat(submissionData.totalCashCollected), // Cash collected as closing value
+        opening_stock: totalOpeningStock,
+        closing_stock: totalClosingStock,
         revenue_received: parseFloat(submissionData.totalCashCollected),
         fuel_type: 'mixed', // Since it's a summary of all fuel types
-        notes: `Cash collection for ${submissionData.shift} shift by ${submissionData.attendantAccount}. Total fuel sold: ${totalLitersSold}L`
+        notes: `Cash collection for ${submissionData.shift} shift by ${submissionData.attendantAccount}. Opening: ${totalOpeningStock}L, Closing: ${totalClosingStock}L, Calculated Sold: ${fuelSold}L`
       });
 
       setSubmissionData({
