@@ -112,7 +112,7 @@ export const FuelAttendantDashboard: React.FC = () => {
     
     fuelTypes.forEach(fuel => {
       const startDate = new Date(initialStock[fuel].date);
-      const daysDiff = Math.ceil((currentDate - startDate) / (1000 * 60 * 60 * 24));
+      const daysDiff = Math.ceil((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       
       // Estimated evaporation rate: 0.1% per day (can be adjusted)
       const evaporationRate = 0.001;
@@ -434,20 +434,20 @@ export const FuelAttendantDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(weightLossData).map(([fuel, data]) => (
-                  <tr key={fuel} className="hover:bg-muted/50">
-                    <td className="border border-border p-3 capitalize font-medium">{fuel}</td>
-                    <td className="border border-border p-3">{data.initialStock.toLocaleString()} L</td>
-                    <td className="border border-border p-3">{data.totalSales.toFixed(2)} L</td>
-                    <td className="border border-border p-3">{data.expectedEvaporation.toFixed(2)} L</td>
-                    <td className="border border-border p-3">{data.actualRemaining.toFixed(2)} L</td>
-                    <td className="border border-border p-3">{data.expectedRemaining.toFixed(2)} L</td>
-                    <td className={`border border-border p-3 font-semibold ${data.variance < 0 ? 'text-destructive' : 'text-secondary'}`}>
-                      {data.variance >= 0 ? '+' : ''}{data.variance.toFixed(2)} L
-                    </td>
-                    <td className="border border-border p-3">{data.daysSinceDelivery}</td>
-                  </tr>
-                ))}
+                 {Object.entries(weightLossData).map(([fuel, data]: [string, any]) => (
+                   <tr key={fuel} className="hover:bg-muted/50">
+                     <td className="border border-border p-3 capitalize font-medium">{fuel}</td>
+                     <td className="border border-border p-3">{data.initialStock.toLocaleString()} L</td>
+                     <td className="border border-border p-3">{data.totalSales.toFixed(2)} L</td>
+                     <td className="border border-border p-3">{data.expectedEvaporation.toFixed(2)} L</td>
+                     <td className="border border-border p-3">{data.actualRemaining.toFixed(2)} L</td>
+                     <td className="border border-border p-3">{data.expectedRemaining.toFixed(2)} L</td>
+                     <td className={`border border-border p-3 font-semibold ${data.variance < 0 ? 'text-destructive' : 'text-secondary'}`}>
+                       {data.variance >= 0 ? '+' : ''}{data.variance.toFixed(2)} L
+                     </td>
+                     <td className="border border-border p-3">{data.daysSinceDelivery}</td>
+                   </tr>
+                 ))}
               </tbody>
             </table>
           </div>
@@ -926,7 +926,7 @@ export const FuelAttendantDashboard: React.FC = () => {
                       <strong>Expected Revenue:</strong> UGX {totalRevenue.toLocaleString()}
                     </p>
                     <p className="text-sm text-primary">
-                      <strong>Difference:</strong> UGX {(parseFloat(submissionData.totalCashCollected || 0) - totalRevenue).toLocaleString()}
+                      <strong>Difference:</strong> UGX {(parseFloat(submissionData.totalCashCollected || "0") - totalRevenue).toLocaleString()}
                     </p>
                   </div>
                 </div>
