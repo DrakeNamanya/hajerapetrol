@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Eye, Calculator, DollarSign, AlertTriangle, Save, Send, Droplets, TrendingDown } from 'lucide-react';
+import { useFuelEntries } from '@/hooks/useFuelEntries';
 
 export const FuelAttendantDashboard: React.FC = () => {
+  const { createEntry, isCreating } = useFuelEntries();
   // Initial Stock - This represents the fuel brought by trucks and poured into tanks
   const [initialStock, setInitialStock] = useState({
     petrol: { liters: 50000, date: new Date().toISOString().split('T')[0] },
@@ -284,15 +286,33 @@ export const FuelAttendantDashboard: React.FC = () => {
     setValidationError('');
   };
 
-  const handleCashSubmission = () => {
-    alert(`Cash submission of UGX ${parseFloat(submissionData.totalCashCollected).toLocaleString()} from ${submissionData.attendantAccount} has been submitted for approval.`);
-    setSubmissionData({
-      attendantAccount: '',
-      totalCashCollected: '',
-      date: new Date().toISOString().split('T')[0],
-      shift: '3pm'
-    });
-    setShowSubmissionForm(false);
+  const handleCashSubmission = async () => {
+    if (!submissionData.totalCashCollected || !submissionData.attendantAccount) {
+      setValidationError('Please fill all required fields');
+      return;
+    }
+
+    try {
+      // Submit to fuel_entries table for accountant review
+      await createEntry.mutateAsync({
+        opening_stock: totalLitersSold, // Use calculated total sold as opening
+        closing_stock: parseFloat(submissionData.totalCashCollected), // Cash collected as closing value
+        revenue_received: parseFloat(submissionData.totalCashCollected),
+        fuel_type: 'mixed', // Since it's a summary of all fuel types
+        notes: `Cash collection for ${submissionData.shift} shift by ${submissionData.attendantAccount}. Total fuel sold: ${totalLitersSold}L`
+      });
+
+      setSubmissionData({
+        attendantAccount: '',
+        totalCashCollected: '',
+        date: new Date().toISOString().split('T')[0],
+        shift: '3pm'
+      });
+      setShowSubmissionForm(false);
+      setValidationError('');
+    } catch (error) {
+      setValidationError('Failed to submit cash collection');
+    }
   };
 
   const salesData = calculateSales();
@@ -935,9 +955,10 @@ export const FuelAttendantDashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleCashSubmission}
-                    className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground py-2 rounded"
+                    disabled={isCreating}
+                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded disabled:opacity-50"
                   >
-                    Submit for Approval
+                    {isCreating ? 'Submitting...' : 'Submit for Approval'}
                   </button>
                   <button
                     type="button"
