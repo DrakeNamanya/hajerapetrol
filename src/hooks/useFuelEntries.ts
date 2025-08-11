@@ -8,7 +8,7 @@ export interface FuelEntry {
   attendant_id: string;
   opening_stock: number;
   closing_stock: number;
-  fuel_sold?: number; // Generated column - calculated automatically
+  fuel_sold: number; // Generated column - calculated automatically (opening_stock - closing_stock)
   revenue_received: number;
   status: 'submitted' | 'approved_by_accountant' | 'approved_by_manager';
   approved_by_accountant?: string;
