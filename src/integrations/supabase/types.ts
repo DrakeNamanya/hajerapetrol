@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -22,7 +22,7 @@ export type Database = {
           id: string
           is_password_changed: boolean
           temporary_password: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -31,7 +31,7 @@ export type Database = {
           id?: string
           is_password_changed?: boolean
           temporary_password: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -40,7 +40,7 @@ export type Database = {
           id?: string
           is_password_changed?: boolean
           temporary_password?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -863,9 +863,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      account_credentials_safe: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          expires_at: string | null
+          id: string | null
+          is_password_changed: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_password_changed?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_password_changed?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      create_account_credential: {
+        Args: {
+          p_email: string
+          p_temporary_password: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
